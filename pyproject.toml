@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "yandex-search-cli"
+version = "0.1.4"
+description = "AI-agent friendly CLI for Yandex Search API — web search and YandexGPT generative search from the terminal."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [
+    { name = "Nolan Vale" },
+]
+maintainers = [
+    { name = "Nolan Vale Tools" },
+]
+keywords = [
+  "yandex",
+  "yandex-search",
+  "yandex-cloud",
+  "yandexgpt",
+  "search-api",
+  "web-search",
+  "russian-search",
+  "cli",
+  "python-cli",
+  "ai-agents",
+  "llm-tools",
+  "json-output",
+  "terminal-tools",
+  "automation",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+    "Topic :: Utilities",
+]
+dependencies = ["requests>=2.28"]
+
+[dependency-groups]
+dev = ["ruff>=0.4"]
+
+[project.urls]
+Homepage = "https://github.com/nolan-vale/yandex-search-cli"
+Repository = "https://github.com/nolan-vale/yandex-search-cli"
+Documentation = "https://github.com/nolan-vale/yandex-search-cli/blob/main/docs/USAGE.md"
+Issues = "https://github.com/nolan-vale/yandex-search-cli/issues"
+Changelog = "https://github.com/nolan-vale/yandex-search-cli/releases"
+
+[project.scripts]
+yandex-search = "yandex_cli.main:search"
+yandex-gen    = "yandex_cli.main:gen"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/yandex_cli"]

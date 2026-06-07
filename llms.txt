@@ -1,0 +1,76 @@
+# yandex-search-cli
+
+> CLI for Yandex Search API and YandexGPT. Provides structured web search from terminal with JSON output for scripts, developers, and AI agents.
+
+## Install
+
+```bash
+uv tool install yandex-search-cli
+```
+
+or:
+
+```bash
+pip install yandex-search-cli
+```
+
+## Setup
+
+Option 1 (recommended):
+
+```bash
+mkdir -p ~/.search-api
+echo '{"apiKey": "your-key", "folderId": "your-folder-id"}' > ~/.search-api/config.json
+```
+
+Option 2 (env vars):
+
+```bash
+export YANDEX_API_KEY=your-key
+export YANDEX_FOLDER_ID=your-folder-id
+```
+
+Requires a Yandex Cloud account with Search API enabled: https://yandex.cloud/en/docs/search-api/quickstart
+
+## Commands
+
+- `yandex-search <query>` — structured Yandex web search from terminal. Flags: --json, --num-results, --type (ru|com|tr|kk|be|uz), --region, --page, --site
+- `yandex-gen <query>` — YandexGPT answer generation with search context. Flags: --json, --site
+
+## Best for
+
+- Russian-language search
+- AI agents
+- terminal automation
+- JSON output
+- developer productivity
+
+## JSON output
+
+yandex-search returns: [{title, url, domain, date, passages[]}]
+yandex-gen returns: {message{content, role}, sources[{used, title, url}], isAnswerRejected, fixedMisspellQuery}
+
+## Quick examples
+
+```bash
+yandex-search "smart city digital platform" --json
+yandex-search "query" --site habr.com --json
+yandex-gen "explain microservices vs monolith" --json
+yandex-search "query" --json | jq -r '.[].url'
+```
+
+## Key files
+
+- `README.md`: English overview, install, quickstart
+- `README.ru.md`: Russian overview and examples
+- `AGENTS.md`: instructions for AI coding agents
+- `docs/USAGE.md`: full usage guide
+- `pyproject.toml`: package metadata and CLI entry points
+
+## Links
+
+- GitHub: https://github.com/nolan-vale/yandex-search-cli
+- PyPI: https://pypi.org/project/yandex-search-cli/
+- Yandex Search API docs: https://yandex.cloud/en/docs/search-api/
+- Full CLI docs: https://github.com/nolan-vale/yandex-search-cli/blob/main/docs/USAGE.md
+- For agents: https://github.com/nolan-vale/yandex-search-cli/blob/main/AGENTS.md
