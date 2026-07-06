@@ -55,8 +55,9 @@ Issues = "https://github.com/nolan-vale/yandex-search-cli/issues"
 Changelog = "https://github.com/nolan-vale/yandex-search-cli/releases"
 
 [project.scripts]
-yandex-search = "yandex_cli.main:search"
-yandex-gen    = "yandex_cli.main:gen"
+yandex-search               = "yandex_cli.main:search"
+yandex-gen                  = "yandex_cli.main:gen"
+yandex-image-search-by-image = "yandex_cli.image_search:search_by_image"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/yandex_cli"]
