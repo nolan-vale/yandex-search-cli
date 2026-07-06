@@ -3,11 +3,8 @@ from __future__ import annotations
 import argparse
 import base64
 import json
-import os
-import sys
 import textwrap
 import defusedxml.ElementTree as ET
-from pathlib import Path
 
 import requests
 
