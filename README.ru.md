@@ -55,8 +55,11 @@ yandex-search "умный город цифровая платформа"
 |---|---|
 | `yandex-search <запрос>` | Веб-поиск: возвращает title, URL, домен, дату, фрагменты текста. |
 | `yandex-gen <запрос>` | Генеративный поиск: YandexGPT пишет ответ с цитированием каждого источника. |
+| `yandex-image-search <запрос>` | Поиск картинок по текстовому запросу. |
+| `yandex-image-search-by-image` | Обратный поиск — найти страницы с данной картинкой (по URL или CBIR ID). |
+| `yandex-wordstat <top\|dynamics\|regions\|regions-tree>` | Статистика частотности запросов Yandex Wordstat. |
 
-Обе команды принимают `--json` — удобно для `jq`, скриптов и AI-агентов.
+Все команды принимают `--json` — удобно для `jq`, скриптов и AI-агентов.
 
 ## Примеры
 
@@ -79,6 +82,21 @@ yandex-search "запрос" --json | jq -r '.[].url'
 # JSON: только .gov.ru домены
 yandex-search "нормативные акты" --json \
   | jq '[.[] | select(.domain | test("gov\\.ru"))]'
+
+# Поиск картинок по тексту
+yandex-image-search "python logo"
+
+# Обратный поиск по картинке
+yandex-image-search-by-image --url "https://example.com/photo.jpg"
+
+# Wordstat: самые частые запросы по ключевому слову
+yandex-wordstat top "python framework" -n 20
+
+# Wordstat: частота запросов во времени
+yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01
+
+# Wordstat: география запросов
+yandex-wordstat regions "python framework" --scope cities
 ```
 
 ## Справочник параметров
@@ -100,6 +118,10 @@ yandex-search "нормативные акты" --json \
 |---|---|---|
 | `--site` | — | Ограничить источники доменом |
 | `--json` | off | Сырой JSON от Яндекса |
+
+**`yandex-image-search-by-image`:** `--url` / `--cbir-id` (одно обязательно), `--site`, `--page`, `--family-mode`, `--json`
+
+**`yandex-wordstat`:** подкоманды `top`, `dynamics`, `regions`, `regions-tree` — см. [полную документацию](docs/USAGE.md)
 
 ## Для AI-агентов и скриптов
 

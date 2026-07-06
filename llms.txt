@@ -1,6 +1,6 @@
 # yandex-search-cli
 
-> CLI for Yandex Search API and YandexGPT. Provides structured web search from terminal with JSON output for scripts, developers, and AI agents.
+> CLI for Yandex Search API and YandexGPT. Provides structured web search, image search, reverse image search, generative search, and Wordstat query-frequency statistics from terminal with JSON output for scripts, developers, and AI agents.
 
 ## Install
 
@@ -36,6 +36,9 @@ Requires a Yandex Cloud account with Search API enabled: https://yandex.cloud/en
 
 - `yandex-search <query>` — structured Yandex web search from terminal. Flags: --json, --num-results, --type (ru|com|tr|kk|be|uz), --region, --page, --site
 - `yandex-gen <query>` — YandexGPT answer generation with search context. Flags: --json, --site
+- `yandex-image-search <query>` — image search by text query. Flags: --json, --num-results, --type, --region, --page, --site
+- `yandex-image-search-by-image (--url URL | --cbir-id ID)` — reverse image search, find pages containing a given image. Flags: --site, --page, --family-mode (none|moderate|strict), --json
+- `yandex-wordstat <top|dynamics|regions|regions-tree>` — Yandex Wordstat query-frequency statistics. `top <phrase>`: most popular queries; `dynamics <phrase> --from DATE`: frequency over time; `regions <phrase>`: geographic distribution; `regions-tree`: supported region IDs
 
 ## Best for
 
@@ -44,11 +47,19 @@ Requires a Yandex Cloud account with Search API enabled: https://yandex.cloud/en
 - terminal automation
 - JSON output
 - developer productivity
+- image search and reverse image search
+- keyword research / SEO query-frequency data (Wordstat)
 
 ## JSON output
 
 yandex-search returns: [{title, url, domain, date, passages[]}]
 yandex-gen returns: {message{content, role}, sources[{used, title, url}], isAnswerRejected, fixedMisspellQuery}
+yandex-image-search returns: [{url, domain, title, thumbnail_url, width, height, page_url, format}]
+yandex-image-search-by-image returns: {images[{url, format, width, height, passage, host, pageTitle, pageUrl}], page, id}
+yandex-wordstat top returns: {totalCount, results[{phrase, count}], associations[{phrase, count}]}
+yandex-wordstat dynamics returns: {results[{date, count, share}]}
+yandex-wordstat regions returns: {results[{region, count, share, affinityIndex}]}
+yandex-wordstat regions-tree returns: {regions[{id, label, children[]}]}
 
 ## Quick examples
 
@@ -57,6 +68,10 @@ yandex-search "smart city digital platform" --json
 yandex-search "query" --site habr.com --json
 yandex-gen "explain microservices vs monolith" --json
 yandex-search "query" --json | jq -r '.[].url'
+yandex-image-search "python logo" --json
+yandex-image-search-by-image --url "https://example.com/photo.jpg" --json
+yandex-wordstat top "python framework" -n 20 --json
+yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01 --json
 ```
 
 ## Key files

@@ -30,8 +30,11 @@ The user needs a [Yandex Cloud](https://cloud.yandex.ru) account with Search API
 |---|---|
 | `yandex-search <query>` | Web search via Yandex. Returns structured results with domain, date, passages. |
 | `yandex-gen <query>` | Generative search via YandexGPT. Returns an AI-written answer with cited sources. |
+| `yandex-image-search <query>` | Image search by text query. Returns url, dimensions, format, source page. |
+| `yandex-image-search-by-image (--url \| --cbir-id)` | Reverse image search — find pages containing a given image. |
+| `yandex-wordstat <top\|dynamics\|regions\|regions-tree>` | Yandex Wordstat query-frequency statistics. |
 
-Both commands support `--json` for structured output.
+All commands support `--json` for structured output.
 
 ## Recommended agent patterns
 
@@ -59,6 +62,25 @@ done | jq -s 'add'
 
 # Search .com Yandex index instead of .ru
 yandex-search "machine learning" -t com -n 20 --json
+
+# Image search by text query
+yandex-image-search "python logo" --json
+
+# Reverse image search (find pages containing a given image)
+yandex-image-search-by-image --url "https://example.com/photo.jpg" --json
+yandex-image-search-by-image --cbir-id "abc123..." --page 1 --json
+
+# Wordstat: most popular queries containing a keyword
+yandex-wordstat top "python framework" -n 20 --json
+
+# Wordstat: query frequency over time
+yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01 --json
+
+# Wordstat: geographic distribution of a keyword's queries
+yandex-wordstat regions "python framework" --scope cities --json
+
+# Wordstat: list of supported region IDs
+yandex-wordstat regions-tree --json
 ```
 
 ## JSON output schemas
@@ -97,6 +119,72 @@ yandex-search "machine learning" -t com -n 20 --json
 }
 ```
 
+**yandex-image-search --json**
+
+```json
+[
+  {
+    "url": "https://example.ru/photo.jpg",
+    "domain": "example.ru",
+    "title": "Page title (often empty — not reliably available from this endpoint)",
+    "thumbnail_url": "http://avatars.mds.yandex.net/i?id=...",
+    "width": 3000,
+    "height": 3000,
+    "page_url": "https://example.ru/page",
+    "format": "png"
+  }
+]
+```
+
+**yandex-image-search-by-image --json** (raw Search API response, camelCase fields)
+
+```json
+{
+  "images": [
+    {
+      "url": "https://example.com/a.jpg",
+      "format": "IMAGE_FORMAT_JPEG",
+      "width": 800,
+      "height": 600,
+      "passage": "Text passage near the image",
+      "host": "example.com",
+      "pageTitle": "Page title",
+      "pageUrl": "https://example.com/page"
+    }
+  ],
+  "page": 0,
+  "id": "cbir-id-for-pagination"
+}
+```
+
+**yandex-wordstat top --json**
+
+```json
+{
+  "totalCount": 4200,
+  "results": [{"phrase": "python framework", "count": 1000}],
+  "associations": [{"phrase": "python library", "count": 500}]
+}
+```
+
+**yandex-wordstat dynamics --json**
+
+```json
+{"results": [{"date": "2026-01-01T00:00:00Z", "count": 500, "share": 0.0123}]}
+```
+
+**yandex-wordstat regions --json**
+
+```json
+{"results": [{"region": "213", "count": 300, "share": 0.05, "affinityIndex": 1.42}]}
+```
+
+**yandex-wordstat regions-tree --json**
+
+```json
+{"regions": [{"id": "225", "label": "Russia", "children": [{"id": "213", "label": "Moscow", "children": []}]}]}
+```
+
 ## All flags
 
 **yandex-search**
@@ -110,6 +198,30 @@ yandex-search <query> [-n N] [-t ru|com|tr|kk|be|uz] [-r REGION] [-p PAGE]
 
 ```
 yandex-gen <query> [--site DOMAIN] [--json]
+```
+
+**yandex-image-search**
+
+```
+yandex-image-search <query> [-n N] [-t ru|com|tr|kk|be|uz] [-r REGION] [-p PAGE]
+                    [--site DOMAIN] [--json]
+```
+
+**yandex-image-search-by-image**
+
+```
+yandex-image-search-by-image (--url URL | --cbir-id ID) [--site DOMAIN] [-p PAGE]
+                              [--family-mode none|moderate|strict] [--json]
+```
+
+**yandex-wordstat**
+
+```
+yandex-wordstat top <phrase> [-n N] [-r REGION]... [-d all|desktop|phone|tablet]... [--json]
+yandex-wordstat dynamics <phrase> --from YYYY-MM-DD [--to YYYY-MM-DD]
+                          [--period monthly|weekly|daily] [-r REGION]... [-d DEVICE]... [--json]
+yandex-wordstat regions <phrase> [--scope all|cities|regions] [-d DEVICE]... [--json]
+yandex-wordstat regions-tree [--json]
 ```
 
 ## Search index types (-t flag)

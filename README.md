@@ -16,7 +16,7 @@
 
 # yandex-search-cli
 
-CLI for [Yandex Search API](https://yandex.cloud/en/services/search-api) and YandexGPT — web search and generative AI search from your terminal.
+CLI for [Yandex Search API](https://yandex.cloud/en/services/search-api) and YandexGPT — web search, image search, generative AI search, and Wordstat statistics from your terminal.
 
 [![PyPI](https://img.shields.io/pypi/v/yandex-search-cli?color=ff6a00&label=PyPI)](https://pypi.org/project/yandex-search-cli/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-ff6a00.svg)](https://python.org)
@@ -29,11 +29,11 @@ CLI for [Yandex Search API](https://yandex.cloud/en/services/search-api) and Yan
 
 ## What it does
 
-`yandex-search-cli` wraps the [Yandex Search API](https://yandex.cloud/en/services/search-api) in two terminal commands. It is the practical way to query Yandex — the dominant search engine for Russian-language content — from scripts, pipelines, and AI agent workflows.
+`yandex-search-cli` wraps the [Yandex Search API](https://yandex.cloud/en/services/search-api) in five terminal commands. It is the practical way to query Yandex — the dominant search engine for Russian-language content — from scripts, pipelines, and AI agent workflows.
 
-`yandex-search` performs web search and returns structured results: title, URL, domain, publication date, and text passages. `yandex-gen` uses YandexGPT to answer a question and cite the sources it used.
+`yandex-search` performs web search and returns structured results: title, URL, domain, publication date, and text passages. `yandex-gen` uses YandexGPT to answer a question and cite the sources it used. `yandex-image-search` and `yandex-image-search-by-image` search images by text query or by a reference image. `yandex-wordstat` returns query-frequency statistics — top queries, trends over time, and regional distribution.
 
-Both commands output clean `--json` for use in scripts and AI agents.
+All commands output clean `--json` for use in scripts and AI agents.
 
 ## Who it is for
 

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "yandex-search-cli"
 version = "0.2.0"
-description = "AI-agent friendly CLI for Yandex Search API — web search and YandexGPT generative search from the terminal."
+description = "AI-agent friendly CLI for Yandex Search API — web search, image search, YandexGPT generative search, and Wordstat statistics from the terminal."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
