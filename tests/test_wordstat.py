@@ -1,5 +1,5 @@
 # tests/test_wordstat.py
-from yandex_cli.wordstat import _format_top
+from yandex_cli.wordstat import _format_dynamics, _format_top, _rfc3339
 
 
 def test_format_top_lists_results_and_associations():
@@ -19,3 +19,15 @@ def test_format_top_omits_associations_section_when_empty():
     data = {"totalCount": 10, "results": [{"phrase": "x", "count": 10}], "associations": []}
     output = _format_top(data)
     assert "Related phrases" not in output
+
+
+def test_rfc3339_converts_date_to_utc_timestamp():
+    assert _rfc3339("2026-01-15") == "2026-01-15T00:00:00Z"
+
+
+def test_format_dynamics_formats_date_count_and_share():
+    data = {"results": [{"date": "2026-01-01T00:00:00Z", "count": 500, "share": 0.0123}]}
+    output = _format_dynamics(data)
+    assert "2026-01-01" in output
+    assert "500" in output
+    assert "1.2300%" in output

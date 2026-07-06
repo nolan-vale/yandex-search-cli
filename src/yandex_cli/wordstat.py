@@ -14,6 +14,17 @@ DEVICES = {
     "tablet": "DEVICE_TABLET",
 }
 
+PERIODS = {
+    "monthly": "PERIOD_MONTHLY",
+    "weekly": "PERIOD_WEEKLY",
+    "daily": "PERIOD_DAILY",
+}
+
+
+def _rfc3339(date_str: str) -> str:
+    dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
 
 def _format_top(data: dict) -> str:
     lines = [f"Total matching queries: {data.get('totalCount', 0)}", "", "Top phrases:"]
@@ -25,6 +36,13 @@ def _format_top(data: dict) -> str:
         lines.append("Related phrases:")
         for r in associations:
             lines.append(f"  {r['count']:>8}  {r['phrase']}")
+    return "\n".join(lines)
+
+
+def _format_dynamics(data: dict) -> str:
+    lines = []
+    for r in data.get("results", []):
+        lines.append(f"{r['date'][:10]}  {r['count']:>8}  {r['share']:.4%}")
     return "\n".join(lines)
 
 
@@ -46,6 +64,7 @@ def wordstat() -> None:
         epilog="""examples:
   yandex-wordstat top "python framework"
   yandex-wordstat top "python framework" -n 20 --device desktop
+  yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01
 """,
     )
     sub = p.add_subparsers(dest="command", required=True)
@@ -56,6 +75,17 @@ def wordstat() -> None:
                         help="number of phrases in the response (default: 20)")
     _add_regions_filter_arg(top_p)
     _add_device_and_json_args(top_p)
+
+    dyn_p = sub.add_parser("dynamics", help="query frequency over time")
+    dyn_p.add_argument("phrase")
+    dyn_p.add_argument("--period", default="monthly", choices=list(PERIODS),
+                        help="aggregation period (default: monthly)")
+    dyn_p.add_argument("--from", dest="from_date", required=True,
+                        help="start date, YYYY-MM-DD")
+    dyn_p.add_argument("--to", dest="to_date", default=None,
+                        help="end date, YYYY-MM-DD (default: today)")
+    _add_regions_filter_arg(dyn_p)
+    _add_device_and_json_args(dyn_p)
 
     args = p.parse_args()
     api_key, folder_id = creds()
@@ -70,3 +100,20 @@ def wordstat() -> None:
         handle_error(resp)
         data = resp.json()
         print(json.dumps(data, ensure_ascii=False, indent=2) if args.json else _format_top(data))
+    elif args.command == "dynamics":
+        body = {
+            "folderId": folder_id,
+            "phrase": args.phrase,
+            "period": PERIODS[args.period],
+            "fromDate": _rfc3339(args.from_date),
+        }
+        if args.to_date:
+            body["toDate"] = _rfc3339(args.to_date)
+        if args.regions:
+            body["regions"] = args.regions
+        if args.devices:
+            body["devices"] = [DEVICES[d] for d in args.devices]
+        resp = requests.post(f"{BASE_URL}/wordstat/dynamics", headers=headers(api_key), json=body, timeout=15)
+        handle_error(resp)
+        data = resp.json()
+        print(json.dumps(data, ensure_ascii=False, indent=2) if args.json else _format_dynamics(data))
