@@ -45,7 +45,7 @@ classifiers = [
 dependencies = ["requests>=2.28", "defusedxml>=0.7"]
 
 [dependency-groups]
-dev = ["ruff>=0.4"]
+dev = ["ruff>=0.4", "pytest>=8.0"]
 
 [project.urls]
 Homepage = "https://github.com/nolan-vale/yandex-search-cli"
@@ -60,3 +60,6 @@ yandex-gen    = "yandex_cli.main:gen"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/yandex_cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
