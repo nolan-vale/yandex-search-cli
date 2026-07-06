@@ -61,6 +61,15 @@ def _format_regions(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_regions_tree(data: dict, indent: int = 0) -> str:
+    lines = []
+    for region in data.get("regions", []):
+        lines.append("  " * indent + f"{region['id']}: {region['label']}")
+        if region.get("children"):
+            lines.append(_format_regions_tree({"regions": region["children"]}, indent + 1))
+    return "\n".join(lines)
+
+
 def _add_regions_filter_arg(p: argparse.ArgumentParser) -> None:
     p.add_argument("-r", "--region", dest="regions", action="append", default=None,
                    help="region ID to filter by (repeatable)")
@@ -81,6 +90,7 @@ def wordstat() -> None:
   yandex-wordstat top "python framework" -n 20 --device desktop
   yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01
   yandex-wordstat regions "python framework" --scope cities
+  yandex-wordstat regions-tree
 """,
     )
     sub = p.add_subparsers(dest="command", required=True)
@@ -108,6 +118,9 @@ def wordstat() -> None:
     reg_p.add_argument("--scope", default="all", choices=list(REGION_SCOPES),
                         help="show distribution by cities, regions, or everywhere (default: all)")
     _add_device_and_json_args(reg_p)
+
+    tree_p = sub.add_parser("regions-tree", help="list Wordstat-supported region IDs")
+    tree_p.add_argument("--json", action="store_true", help="raw JSON output")
 
     args = p.parse_args()
     api_key, folder_id = creds()
@@ -147,3 +160,11 @@ def wordstat() -> None:
         handle_error(resp)
         data = resp.json()
         print(json.dumps(data, ensure_ascii=False, indent=2) if args.json else _format_regions(data))
+    elif args.command == "regions-tree":
+        resp = requests.post(
+            f"{BASE_URL}/wordstat/getRegionsTree", headers=headers(api_key),
+            json={"folderId": folder_id}, timeout=15,
+        )
+        handle_error(resp)
+        data = resp.json()
+        print(json.dumps(data, ensure_ascii=False, indent=2) if args.json else _format_regions_tree(data))

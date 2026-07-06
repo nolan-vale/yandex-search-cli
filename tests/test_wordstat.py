@@ -1,5 +1,5 @@
 # tests/test_wordstat.py
-from yandex_cli.wordstat import _format_dynamics, _format_regions, _format_top, _rfc3339
+from yandex_cli.wordstat import _format_dynamics, _format_regions, _format_regions_tree, _format_top, _rfc3339
 
 
 def test_format_top_lists_results_and_associations():
@@ -38,3 +38,11 @@ def test_format_regions_includes_affinity_index():
     output = _format_regions(data)
     assert "213" in output
     assert "1.42" in output
+
+
+def test_format_regions_tree_indents_children():
+    data = {"regions": [{"id": "225", "label": "Russia", "children": [{"id": "213", "label": "Moscow", "children": []}]}]}
+    output = _format_regions_tree(data)
+    lines = output.splitlines()
+    assert lines[0] == "225: Russia"
+    assert lines[1] == "  213: Moscow"
