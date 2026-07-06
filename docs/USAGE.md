@@ -86,6 +86,81 @@ yandex-gen "запрос" --json
 
 ---
 
+### yandex-image-search
+
+```
+yandex-image-search <запрос> [параметры]
+```
+
+| Флаг | По умолчанию | Описание |
+|---|---|---|
+| `-n` / `--num-results` | `10` | Количество результатов |
+| `-t` / `--type` | `ru` | Индекс поиска: `ru` · `com` · `tr` · `kk` · `be` · `uz` |
+| `-r` / `--region` | — | Код региона (например, `213` — Москва) |
+| `-p` / `--page` | `0` | Номер страницы (с 0) |
+| `--site` | — | Ограничить поиск доменом |
+| `--json` | off | JSON-массив: `[{url, domain, title, thumbnail_url, width, height, page_url, format}]` |
+
+**Примеры:**
+
+```bash
+yandex-image-search "python logo"
+yandex-image-search "python logo" -n 20
+yandex-image-search "sunset" --site unsplash.com
+yandex-image-search "sunset" --json
+```
+
+---
+
+### yandex-image-search-by-image
+
+```
+yandex-image-search-by-image (--url URL | --cbir-id ID) [параметры]
+```
+
+| Флаг | По умолчанию | Описание |
+|---|---|---|
+| `--url` | — | URL картинки для поиска (взаимоисключающе с `--cbir-id`) |
+| `--cbir-id` | — | CBIR ID из поля `id` предыдущего ответа |
+| `--site` | — | Ограничить результаты доменом |
+| `-p` / `--page` | `0` | Номер страницы (с 0) |
+| `--family-mode` | — | Фильтрация контента: `none` · `moderate` · `strict` |
+| `--json` | off | Сырой JSON от Яндекса |
+
+**Примеры:**
+
+```bash
+yandex-image-search-by-image --url "https://example.com/photo.jpg"
+yandex-image-search-by-image --url "https://example.com/photo.jpg" --site habr.com
+yandex-image-search-by-image --cbir-id "abc123..." --page 1
+```
+
+---
+
+### yandex-wordstat
+
+```
+yandex-wordstat <top|dynamics|regions|regions-tree> [параметры]
+```
+
+| Подкоманда | Описание |
+|---|---|
+| `top <фраза>` | Самые частые запросы, содержащие ключевое слово (`-n`, `--device`, `--region`) |
+| `dynamics <фраза> --from ДАТА` | Частота запросов во времени (`--period monthly\|weekly\|daily`, `--to`) |
+| `regions <фраза>` | География запросов (`--scope all\|cities\|regions`) |
+| `regions-tree` | Список поддерживаемых регионов и их ID |
+
+**Примеры:**
+
+```bash
+yandex-wordstat top "python framework" -n 20
+yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01
+yandex-wordstat regions "python framework" --scope cities
+yandex-wordstat regions-tree
+```
+
+---
+
 ## Формат JSON (yandex-search)
 
 ```json

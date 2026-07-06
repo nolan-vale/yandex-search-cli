@@ -51,6 +51,9 @@ Both commands output clean `--json` for use in scripts and AI agents.
 - Paginate results (`--page`)
 - Filter by region code
 - Clean `--json` output for every command
+- Image search — find images matching a text query (`yandex-image-search`)
+- Reverse image search — find pages containing a given image (`yandex-image-search-by-image`)
+- Yandex Wordstat query-frequency statistics — top queries, trends over time, regional distribution (`yandex-wordstat`)
 
 ## Installation
 
@@ -110,6 +113,12 @@ yandex-search "regulations" --json \
 | `--json` | off | JSON array: `[{title, url, domain, date, passages}]` |
 
 **All flags — `yandex-gen`:** `--site`, `--json`
+
+**All flags — `yandex-image-search`:** `-n` / `--num-results`, `-t` / `--type`, `-r` / `--region`, `-p` / `--page`, `--site`, `--json`
+
+**All flags — `yandex-image-search-by-image`:** `--url` / `--cbir-id` (one required), `--site`, `--page`, `--family-mode`, `--json`
+
+**All flags — `yandex-wordstat`:** subcommands `top`, `dynamics`, `regions`, `regions-tree` — see [full documentation](docs/USAGE.md) for per-subcommand flags
 
 ## AI agent usage
 
