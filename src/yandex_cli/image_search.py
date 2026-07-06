@@ -7,21 +7,19 @@ import json
 import defusedxml.ElementTree as ET
 import requests
 
-from yandex_cli._common import BASE_URL, creds, handle_error, headers
+from yandex_cli._common import (
+    BASE_URL,
+    SEARCH_TYPES,
+    creds,
+    handle_error,
+    headers,
+    xml_text as _xml_text,
+)
 
 FAMILY_MODES = {
     "none": "FAMILY_MODE_NONE",
     "moderate": "FAMILY_MODE_MODERATE",
     "strict": "FAMILY_MODE_STRICT",
-}
-
-SEARCH_TYPES = {
-    "ru": "SEARCH_TYPE_RU",
-    "com": "SEARCH_TYPE_COM",
-    "tr": "SEARCH_TYPE_TR",
-    "kk": "SEARCH_TYPE_KK",
-    "be": "SEARCH_TYPE_BE",
-    "uz": "SEARCH_TYPE_UZ",
 }
 
 
@@ -98,12 +96,6 @@ def search_by_image() -> None:
 # same <results>/<grouping>/<group>/<doc> shape as main.py's _parse_web_xml.
 # Notably, real responses had an empty <properties/> with no <title> child —
 # source-page titles are not reliably available from this endpoint.
-
-
-def _xml_text(el: ET.Element | None) -> str:
-    if el is None:
-        return ""
-    return "".join(el.itertext()).strip()
 
 
 def _xml_int(el: ET.Element | None) -> int:

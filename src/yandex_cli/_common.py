@@ -1,11 +1,29 @@
+from __future__ import annotations
+
 import json
 import os
 import sys
 from pathlib import Path
 
+import defusedxml.ElementTree as ET
 import requests
 
 BASE_URL = "https://searchapi.api.cloud.yandex.net/v2"
+
+SEARCH_TYPES = {
+    "ru": "SEARCH_TYPE_RU",
+    "com": "SEARCH_TYPE_COM",
+    "tr": "SEARCH_TYPE_TR",
+    "kk": "SEARCH_TYPE_KK",
+    "be": "SEARCH_TYPE_BE",
+    "uz": "SEARCH_TYPE_UZ",
+}
+
+
+def xml_text(el: ET.Element | None) -> str:
+    if el is None:
+        return ""
+    return "".join(el.itertext()).strip()
 
 
 def creds() -> tuple[str, str]:

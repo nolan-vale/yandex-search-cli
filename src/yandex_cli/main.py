@@ -8,22 +8,14 @@ import defusedxml.ElementTree as ET
 
 import requests
 
-from yandex_cli._common import BASE_URL, creds as _creds, handle_error as _handle_error, headers as _headers
-
-SEARCH_TYPES = {
-    "ru": "SEARCH_TYPE_RU",
-    "com": "SEARCH_TYPE_COM",
-    "tr": "SEARCH_TYPE_TR",
-    "kk": "SEARCH_TYPE_KK",
-    "be": "SEARCH_TYPE_BE",
-    "uz": "SEARCH_TYPE_UZ",
-}
-
-
-def _xml_text(el: ET.Element | None) -> str:
-    if el is None:
-        return ""
-    return "".join(el.itertext()).strip()
+from yandex_cli._common import (
+    BASE_URL,
+    SEARCH_TYPES,
+    creds as _creds,
+    handle_error as _handle_error,
+    headers as _headers,
+    xml_text as _xml_text,
+)
 
 
 def _parse_web_xml(raw_b64: str) -> list[dict]:
