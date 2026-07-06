@@ -20,6 +20,12 @@ PERIODS = {
     "daily": "PERIOD_DAILY",
 }
 
+REGION_SCOPES = {
+    "all": "REGION_ALL",
+    "cities": "REGION_CITIES",
+    "regions": "REGION_REGIONS",
+}
+
 
 def _rfc3339(date_str: str) -> str:
     dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
@@ -46,6 +52,15 @@ def _format_dynamics(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_regions(data: dict) -> str:
+    lines = []
+    for r in data.get("results", []):
+        lines.append(
+            f"{r['region']:>8}  count={r['count']:<8} share={r['share']:.4%}  affinity={r['affinityIndex']:.2f}"
+        )
+    return "\n".join(lines)
+
+
 def _add_regions_filter_arg(p: argparse.ArgumentParser) -> None:
     p.add_argument("-r", "--region", dest="regions", action="append", default=None,
                    help="region ID to filter by (repeatable)")
@@ -65,6 +80,7 @@ def wordstat() -> None:
   yandex-wordstat top "python framework"
   yandex-wordstat top "python framework" -n 20 --device desktop
   yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01
+  yandex-wordstat regions "python framework" --scope cities
 """,
     )
     sub = p.add_subparsers(dest="command", required=True)
@@ -86,6 +102,12 @@ def wordstat() -> None:
                         help="end date, YYYY-MM-DD (default: today)")
     _add_regions_filter_arg(dyn_p)
     _add_device_and_json_args(dyn_p)
+
+    reg_p = sub.add_parser("regions", help="geographic distribution of a keyword's queries")
+    reg_p.add_argument("phrase")
+    reg_p.add_argument("--scope", default="all", choices=list(REGION_SCOPES),
+                        help="show distribution by cities, regions, or everywhere (default: all)")
+    _add_device_and_json_args(reg_p)
 
     args = p.parse_args()
     api_key, folder_id = creds()
@@ -117,3 +139,11 @@ def wordstat() -> None:
         handle_error(resp)
         data = resp.json()
         print(json.dumps(data, ensure_ascii=False, indent=2) if args.json else _format_dynamics(data))
+    elif args.command == "regions":
+        body = {"folderId": folder_id, "phrase": args.phrase, "region": REGION_SCOPES[args.scope]}
+        if args.devices:
+            body["devices"] = [DEVICES[d] for d in args.devices]
+        resp = requests.post(f"{BASE_URL}/wordstat/regions", headers=headers(api_key), json=body, timeout=15)
+        handle_error(resp)
+        data = resp.json()
+        print(json.dumps(data, ensure_ascii=False, indent=2) if args.json else _format_regions(data))

@@ -1,5 +1,5 @@
 # tests/test_wordstat.py
-from yandex_cli.wordstat import _format_dynamics, _format_top, _rfc3339
+from yandex_cli.wordstat import _format_dynamics, _format_regions, _format_top, _rfc3339
 
 
 def test_format_top_lists_results_and_associations():
@@ -31,3 +31,10 @@ def test_format_dynamics_formats_date_count_and_share():
     assert "2026-01-01" in output
     assert "500" in output
     assert "1.2300%" in output
+
+
+def test_format_regions_includes_affinity_index():
+    data = {"results": [{"region": "213", "count": 300, "share": 0.05, "affinityIndex": 1.42}]}
+    output = _format_regions(data)
+    assert "213" in output
+    assert "1.42" in output
