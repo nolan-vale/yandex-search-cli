@@ -58,6 +58,7 @@ Changelog = "https://github.com/nolan-vale/yandex-search-cli/releases"
 yandex-search               = "yandex_cli.main:search"
 yandex-gen                  = "yandex_cli.main:gen"
 yandex-image-search-by-image = "yandex_cli.image_search:search_by_image"
+yandex-image-search = "yandex_cli.image_search:search"
 yandex-wordstat = "yandex_cli.wordstat:wordstat"
 
 [tool.hatch.build.targets.wheel]
