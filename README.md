@@ -154,6 +154,10 @@ See [AGENTS.md](AGENTS.md) for full schemas, exit codes, and environment referen
 
 → [Full documentation](docs/USAGE.md)
 
+## How this was built
+
+Spec first, then a plan, then implementation with AI coding agents (Claude Code, Codex). Every diff gets reviewed before merge, and releases go through tests and basic security checks. More on the process on the [Nolan Vale profile](https://github.com/nolan-vale).
+
 ## Project metadata
 
 - **Author:** Nolan Vale
