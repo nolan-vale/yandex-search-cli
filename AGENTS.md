@@ -34,6 +34,14 @@ The user needs a [Yandex Cloud](https://cloud.yandex.ru) account with Search API
 | `yandex-image-search-by-image (--url \| --cbir-id)` | Reverse image search — find pages containing a given image. |
 | `yandex-wordstat <top\|dynamics\|regions\|regions-tree>` | Yandex Wordstat query-frequency statistics. |
 
+## Agent Memory v5
+
+- Current task state: `.agent/current.md`.
+- Stable repo context: `memory/project.md`.
+- Durable decisions: `memory/decisions/*.md`.
+- Substantial plans or research syntheses: `memory/specs/*.md`.
+- Do not create repo-local task mirrors.
+
 All commands support `--json` for structured output.
 
 ## Recommended agent patterns
