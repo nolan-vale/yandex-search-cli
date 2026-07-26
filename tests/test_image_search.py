@@ -1,6 +1,17 @@
 import base64
+import contextlib
+import io
+import json
+import sys
+from unittest import mock
 
-from yandex_cli.image_search import _format_images, _format_search_by_image, _parse_image_xml
+from yandex_cli.image_search import (
+    _format_images,
+    _format_search_by_image,
+    _parse_image_xml,
+    search,
+    search_by_image,
+)
 
 
 def test_format_search_by_image_lists_results_with_dimensions():
@@ -29,7 +40,11 @@ def test_format_search_by_image_lists_results_with_dimensions():
 
 
 def test_format_search_by_image_handles_missing_title():
-    data = {"images": [{"url": "https://example.com/b.jpg", "pageUrl": "", "host": ""}], "page": 0, "id": ""}
+    data = {
+        "images": [{"url": "https://example.com/b.jpg", "pageUrl": "", "host": ""}],
+        "page": 0,
+        "id": "",
+    }
     output = _format_search_by_image(data)
     assert "(no title)" in output
 
@@ -153,7 +168,10 @@ def test_parse_image_xml_extracts_known_fields():
     second = results[1]
     assert second["width"] == 1920
     assert second["height"] == 1080
-    assert second["page_url"] == "https://www.comoinstalar.com.br/instalar-python-no-windows-em-3-passos/"
+    assert (
+        second["page_url"]
+        == "https://www.comoinstalar.com.br/instalar-python-no-windows-em-3-passos/"
+    )
     assert second["format"] == "jpg"
 
 
@@ -179,3 +197,70 @@ def test_format_images_lists_results_with_dimensions_and_no_title_fallback():
     assert "500x148  png" in output
     assert "https://en.wikipedia.org/wiki/CPython" in output
     assert "upload.wikimedia.org" in output
+
+
+def test_image_search_json_entrypoint_calls_client(monkeypatch):
+    monkeypatch.setattr("yandex_cli.image_search.creds", lambda: ("key", "folder"))
+    client = mock.Mock()
+    client.image_search.return_value = [{"url": "https://example.com/a.png"}]
+    client_class = mock.Mock(return_value=client)
+    monkeypatch.setattr("yandex_cli.image_search.YandexSearchClient", client_class)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "yandex-image-search",
+            "python logo",
+            "--site",
+            "example.com",
+            "-n",
+            "2",
+            "--json",
+        ],
+    )
+    stdout = io.StringIO()
+
+    with contextlib.redirect_stdout(stdout):
+        search()
+
+    assert json.loads(stdout.getvalue())[0]["url"] == "https://example.com/a.png"
+    client.image_search.assert_called_once_with(
+        "site:example.com python logo",
+        search_type="SEARCH_TYPE_RU",
+        num_results=2,
+        page=0,
+        region=None,
+    )
+
+
+def test_reverse_image_search_json_entrypoint_calls_client(monkeypatch):
+    monkeypatch.setattr("yandex_cli.image_search.creds", lambda: ("key", "folder"))
+    client = mock.Mock()
+    client.reverse_image_search.return_value = {"images": [], "id": "cbir", "page": 0}
+    client_class = mock.Mock(return_value=client)
+    monkeypatch.setattr("yandex_cli.image_search.YandexSearchClient", client_class)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "yandex-image-search-by-image",
+            "--url",
+            "https://example.com/a.png",
+            "--family-mode",
+            "strict",
+            "--json",
+        ],
+    )
+    stdout = io.StringIO()
+
+    with contextlib.redirect_stdout(stdout):
+        search_by_image()
+
+    assert json.loads(stdout.getvalue())["id"] == "cbir"
+    client.reverse_image_search.assert_called_once_with(
+        url="https://example.com/a.png",
+        cbir_id=None,
+        site=None,
+        page=0,
+        family_mode="FAMILY_MODE_STRICT",
+    )

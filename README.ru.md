@@ -13,19 +13,19 @@
 [![PyPI](https://img.shields.io/pypi/v/yandex-search-cli?color=ff6a00&label=PyPI)](https://pypi.org/project/yandex-search-cli/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-ff6a00.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-ff6a00.svg)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/nolan-vale/yandex-search-cli?style=social)](https://github.com/nolan-vale/yandex-search)
+[![Stars](https://img.shields.io/github/stars/nolan-vale/yandex-search-cli?style=social)](https://github.com/nolan-vale/yandex-search-cli)
 
 </div>
 
 ---
 
-`yandex-search` оборачивает [Yandex Search API](https://yandex.cloud/en/services/search-api) в две команды терминала. `yandex-search` — структурированный веб-поиск с доменами, датами и сниппетами. `yandex-gen` — YandexGPT отвечает на вопросы и цитирует источники. Все команды выводят `--json` для скриптов и агентов.
+`yandex-search-cli` оборачивает [Yandex Search API](https://yandex.cloud/en/services/search-api) в пять команд терминала: веб-поиск, генеративный поиск YandexGPT, поиск картинок, обратный поиск по картинке и Wordstat. Все команды выводят `--json` для скриптов и агентов.
 
 ## Запустить за 60 секунд
 
 **Шаг 1 — Установка:**
 ```bash
-uv tool install yandex-search
+uv tool install yandex-search-cli
 ```
 
 > Нет `uv`? Запусти `curl -LsSf https://astral.sh/uv/install.sh | sh`, или используй `pip install yandex-search-cli`.
@@ -117,7 +117,7 @@ yandex-wordstat regions "python framework" --scope cities
 | Флаг | По умолчанию | Описание |
 |---|---|---|
 | `--site` | — | Ограничить источники доменом |
-| `--json` | off | Сырой JSON от Яндекса |
+| `--json` | off | JSON-ответ YandexGPT |
 
 **`yandex-image-search-by-image`:** `--url` / `--cbir-id` (одно обязательно), `--site`, `--page`, `--family-mode`, `--json`
 

@@ -1,38 +1,19 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 import textwrap
-import defusedxml.ElementTree as ET
-
-import requests
 
 from yandex_cli._common import (
-    BASE_URL,
     SEARCH_TYPES,
     creds as _creds,
-    handle_error as _handle_error,
-    headers as _headers,
-    xml_text as _xml_text,
+    nonnegative_int,
+    positive_int,
 )
+from yandex_cli.client import YandexSearchClient
+from yandex_cli.parsers import parse_web_xml
 
-
-def _parse_web_xml(raw_b64: str) -> list[dict]:
-    xml_bytes = base64.b64decode(raw_b64)
-    root = ET.fromstring(xml_bytes.decode("utf-8"))
-    docs = []
-    for doc in root.iter("doc"):
-        url = _xml_text(doc.find("url"))
-        title = _xml_text(doc.find("title"))
-        domain = _xml_text(doc.find("domain"))
-        modtime = _xml_text(doc.find("modtime"))
-        date = modtime[:8] if len(modtime) >= 8 else ""
-        if date:
-            date = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
-        passages = [_xml_text(p) for p in doc.iter("passage") if _xml_text(p)]
-        docs.append({"title": title, "url": url, "domain": domain, "date": date, "passages": passages})
-    return docs
+_parse_web_xml = parse_web_xml
 
 
 def _print_web(docs: list[dict]) -> None:
@@ -88,45 +69,50 @@ def search() -> None:
 """,
     )
     p.add_argument("query")
-    p.add_argument("-n", "--num-results", type=int, default=10,
-                   help="number of results (default: 10)")
-    p.add_argument("-t", "--type", default="ru", choices=list(SEARCH_TYPES),
-                   help="search type: ru, com, tr, kk, be, uz (default: ru)")
-    p.add_argument("-r", "--region", default=None,
-                   help="search region code (e.g. 213 for Moscow)")
-    p.add_argument("-p", "--page", type=int, default=0,
-                   help="page number, 0-indexed (default: 0)")
-    p.add_argument("--site", default=None,
-                   help="restrict results to this domain (e.g. habr.com)")
-    p.add_argument("--json", action="store_true",
-                   help="JSON output: array of {title, url, domain, date, passages}")
+    p.add_argument(
+        "-n",
+        "--num-results",
+        type=positive_int,
+        default=10,
+        help="number of results (default: 10)",
+    )
+    p.add_argument(
+        "-t",
+        "--type",
+        default="ru",
+        choices=list(SEARCH_TYPES),
+        help="search type: ru, com, tr, kk, be, uz (default: ru)",
+    )
+    p.add_argument(
+        "-r", "--region", default=None, help="search region code (e.g. 213 for Moscow)"
+    )
+    p.add_argument(
+        "-p",
+        "--page",
+        type=nonnegative_int,
+        default=0,
+        help="page number, 0-indexed (default: 0)",
+    )
+    p.add_argument(
+        "--site", default=None, help="restrict results to this domain (e.g. habr.com)"
+    )
+    p.add_argument(
+        "--json",
+        action="store_true",
+        help="JSON output: array of {title, url, domain, date, passages}",
+    )
     args = p.parse_args()
 
     api_key, folder_id = _creds()
-
     query_text = f"site:{args.site} {args.query}" if args.site else args.query
-
-    body: dict = {
-        "folderId": folder_id,
-        "query": {
-            "searchType": SEARCH_TYPES[args.type],
-            "queryText": query_text,
-            "page": args.page,
-        },
-        "groupSpec": {
-            "groupsOnPage": args.num_results,
-            "docsInGroup": 1,
-        },
-        "maxPassages": 2,
-    }
-    if args.region:
-        body["query"]["region"] = args.region
-
-    resp = requests.post(f"{BASE_URL}/web/search", headers=_headers(api_key), json=body, timeout=15)
-    _handle_error(resp)
-    data = resp.json()
-
-    docs = _parse_web_xml(data["rawData"])
+    client = YandexSearchClient(api_key, folder_id)
+    docs = client.web_search(
+        query_text,
+        search_type=SEARCH_TYPES[args.type],
+        num_results=args.num_results,
+        page=args.page,
+        region=args.region,
+    )
 
     if args.json:
         print(json.dumps(docs, ensure_ascii=False, indent=2))
@@ -146,27 +132,13 @@ def gen() -> None:
 """,
     )
     p.add_argument("query")
-    p.add_argument("--site", default=None,
-                   help="restrict sources to this domain")
-    p.add_argument("--json", action="store_true",
-                   help="raw JSON output")
+    p.add_argument("--site", default=None, help="restrict sources to this domain")
+    p.add_argument("--json", action="store_true", help="JSON output")
     args = p.parse_args()
 
     api_key, folder_id = _creds()
-
-    body: dict = {
-        "folderId": folder_id,
-        "messages": [{"content": args.query, "role": "ROLE_USER"}],
-        "fixMisspell": True,
-    }
-    if args.site:
-        body["site"] = [args.site]
-
-    resp = requests.post(f"{BASE_URL}/gen/search", headers=_headers(api_key), json=body, timeout=30)
-    _handle_error(resp)
-    data = resp.json()
-
-    result = data[0] if isinstance(data, list) else data
+    client = YandexSearchClient(api_key, folder_id)
+    result = client.generative_search(args.query, site=args.site)
 
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))

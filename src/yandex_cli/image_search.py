@@ -1,20 +1,18 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 
-import defusedxml.ElementTree as ET
-import requests
-
 from yandex_cli._common import (
-    BASE_URL,
     SEARCH_TYPES,
     creds,
-    handle_error,
-    headers,
-    xml_text as _xml_text,
+    nonnegative_int,
+    positive_int,
 )
+from yandex_cli.client import YandexSearchClient
+from yandex_cli.parsers import parse_image_xml
+
+_parse_image_xml = parse_image_xml
 
 FAMILY_MODES = {
     "none": "FAMILY_MODE_NONE",
@@ -54,30 +52,35 @@ def search_by_image() -> None:
     )
     src = p.add_mutually_exclusive_group(required=True)
     src.add_argument("--url", help="image URL to search by")
-    src.add_argument("--cbir-id", help="CBIR ID from a previous search result's `id` field")
+    src.add_argument(
+        "--cbir-id", help="CBIR ID from a previous search result's `id` field"
+    )
     p.add_argument("--site", default=None, help="restrict results to this domain")
-    p.add_argument("-p", "--page", type=int, default=0,
-                   help="page number, 0-indexed (default: 0)")
-    p.add_argument("--family-mode", default=None, choices=list(FAMILY_MODES),
-                   help="content filtering: none, moderate, strict")
-    p.add_argument("--json", action="store_true", help="raw JSON output")
+    p.add_argument(
+        "-p",
+        "--page",
+        type=nonnegative_int,
+        default=0,
+        help="page number, 0-indexed (default: 0)",
+    )
+    p.add_argument(
+        "--family-mode",
+        default=None,
+        choices=list(FAMILY_MODES),
+        help="content filtering: none, moderate, strict",
+    )
+    p.add_argument("--json", action="store_true", help="JSON output")
     args = p.parse_args()
 
     api_key, folder_id = creds()
-
-    body: dict = {"folderId": folder_id, "page": args.page}
-    if args.url:
-        body["url"] = args.url
-    else:
-        body["id"] = args.cbir_id
-    if args.site:
-        body["site"] = args.site
-    if args.family_mode:
-        body["familyMode"] = FAMILY_MODES[args.family_mode]
-
-    resp = requests.post(f"{BASE_URL}/image/search_by_image", headers=headers(api_key), json=body, timeout=15)
-    handle_error(resp)
-    data = resp.json()
+    client = YandexSearchClient(api_key, folder_id)
+    data = client.reverse_image_search(
+        url=args.url,
+        cbir_id=args.cbir_id,
+        site=args.site,
+        page=args.page,
+        family_mode=FAMILY_MODES.get(args.family_mode) if args.family_mode else None,
+    )
 
     if args.json:
         print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -96,30 +99,6 @@ def search_by_image() -> None:
 # same <results>/<grouping>/<group>/<doc> shape as main.py's _parse_web_xml.
 # Notably, real responses had an empty <properties/> with no <title> child —
 # source-page titles are not reliably available from this endpoint.
-
-
-def _xml_int(el: ET.Element | None) -> int:
-    text = _xml_text(el)
-    return int(text) if text.isdigit() else 0
-
-
-def _parse_image_xml(raw_b64: str) -> list[dict]:
-    xml_bytes = base64.b64decode(raw_b64)
-    root = ET.fromstring(xml_bytes.decode("utf-8"))
-    images = []
-    for doc in root.iter("doc"):
-        props = doc.find("image-properties")
-        images.append({
-            "url": _xml_text(doc.find("url")),
-            "domain": _xml_text(doc.find("domain")),
-            "title": _xml_text(doc.find("properties/title")),
-            "thumbnail_url": _xml_text(props.find("thumbnail-link")) if props is not None else "",
-            "width": _xml_int(props.find("original-width")) if props is not None else 0,
-            "height": _xml_int(props.find("original-height")) if props is not None else 0,
-            "page_url": _xml_text(props.find("html-link")) if props is not None else "",
-            "format": _xml_text(props.find("mime-type")) if props is not None else "",
-        })
-    return images
 
 
 def _format_images(images: list[dict]) -> str:
@@ -150,41 +129,52 @@ def search() -> None:
 """,
     )
     p.add_argument("query")
-    p.add_argument("-n", "--num-results", type=int, default=10,
-                   help="number of results (default: 10)")
-    p.add_argument("-t", "--type", default="ru", choices=list(SEARCH_TYPES),
-                   help="search type: ru, com, tr, kk, be, uz (default: ru)")
-    p.add_argument("-r", "--region", default=None,
-                   help="search region code (e.g. 213 for Moscow)")
-    p.add_argument("-p", "--page", type=int, default=0,
-                   help="page number, 0-indexed (default: 0)")
-    p.add_argument("--site", default=None,
-                   help="restrict results to this domain (e.g. unsplash.com)")
-    p.add_argument("--json", action="store_true",
-                   help="JSON output: array of {url, domain, title, thumbnail_url, width, height, page_url, format}")
+    p.add_argument(
+        "-n",
+        "--num-results",
+        type=positive_int,
+        default=10,
+        help="number of results (default: 10)",
+    )
+    p.add_argument(
+        "-t",
+        "--type",
+        default="ru",
+        choices=list(SEARCH_TYPES),
+        help="search type: ru, com, tr, kk, be, uz (default: ru)",
+    )
+    p.add_argument(
+        "-r", "--region", default=None, help="search region code (e.g. 213 for Moscow)"
+    )
+    p.add_argument(
+        "-p",
+        "--page",
+        type=nonnegative_int,
+        default=0,
+        help="page number, 0-indexed (default: 0)",
+    )
+    p.add_argument(
+        "--site",
+        default=None,
+        help="restrict results to this domain (e.g. unsplash.com)",
+    )
+    p.add_argument(
+        "--json",
+        action="store_true",
+        help="JSON output: array of {url, domain, title, thumbnail_url, width, height, page_url, format}",
+    )
     args = p.parse_args()
 
     api_key, folder_id = creds()
-
     query_text = f"site:{args.site} {args.query}" if args.site else args.query
-
-    body: dict = {
-        "folderId": folder_id,
-        "query": {
-            "searchType": SEARCH_TYPES[args.type],
-            "queryText": query_text,
-            "page": args.page,
-        },
-        "docsOnPage": args.num_results,
-    }
-    if args.region:
-        body["query"]["region"] = args.region
-
-    resp = requests.post(f"{BASE_URL}/image/search", headers=headers(api_key), json=body, timeout=15)
-    handle_error(resp)
-    data = resp.json()
-
-    images = _parse_image_xml(data["rawData"])
+    client = YandexSearchClient(api_key, folder_id)
+    images = client.image_search(
+        query_text,
+        search_type=SEARCH_TYPES[args.type],
+        num_results=args.num_results,
+        page=args.page,
+        region=args.region,
+    )
 
     if args.json:
         print(json.dumps(images, ensure_ascii=False, indent=2))

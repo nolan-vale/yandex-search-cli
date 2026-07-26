@@ -74,7 +74,7 @@ yandex-gen <запрос> [параметры]
 | Флаг | По умолчанию | Описание |
 |---|---|---|
 | `--site` | — | Ограничить источники доменом |
-| `--json` | off | Сырой JSON от Яндекса |
+| `--json` | off | JSON-ответ YandexGPT |
 
 **Примеры:**
 
@@ -125,7 +125,7 @@ yandex-image-search-by-image (--url URL | --cbir-id ID) [параметры]
 | `--site` | — | Ограничить результаты доменом |
 | `-p` / `--page` | `0` | Номер страницы (с 0) |
 | `--family-mode` | — | Фильтрация контента: `none` · `moderate` · `strict` |
-| `--json` | off | Сырой JSON от Яндекса |
+| `--json` | off | JSON-ответ Yandex Search API |
 
 **Примеры:**
 

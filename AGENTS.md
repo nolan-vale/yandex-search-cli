@@ -44,6 +44,12 @@ The user needs a [Yandex Cloud](https://cloud.yandex.ru) account with Search API
 
 All commands support `--json` for structured output.
 
+## Implementation layout
+
+- `src/yandex_cli/client.py` contains `YandexSearchClient`, the single request/response contract layer.
+- `src/yandex_cli/parsers.py` contains XML parsers for base64 `rawData` responses.
+- CLI entrypoints in `main.py`, `image_search.py`, and `wordstat.py` should parse args, call `YandexSearchClient`, and format output. Do not put direct `requests.post` calls in entrypoints.
+
 ## Recommended agent patterns
 
 ```bash

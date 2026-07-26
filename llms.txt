@@ -80,6 +80,8 @@ yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01 -
 - `README.ru.md`: Russian overview and examples
 - `AGENTS.md`: instructions for AI coding agents
 - `docs/USAGE.md`: full usage guide
+- `src/yandex_cli/client.py`: YandexSearchClient request/response contract layer
+- `src/yandex_cli/parsers.py`: web/image XML rawData parsers
 - `pyproject.toml`: package metadata and CLI entry points
 
 ## Links
