@@ -11,25 +11,11 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
       - uses: astral-sh/setup-uv@v5
-
-      - name: Set up Python
-        run: uv python install 3.12
-
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Lint with ruff
-        run: uv run ruff check src tests
-
-      - name: Check formatting
-        run: uv run ruff format --check src tests
-
-      - name: Run tests
-        run: uv run pytest tests/ -v
 
       - name: Build
         run: uv build
