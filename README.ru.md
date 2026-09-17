@@ -1,147 +1,98 @@
-<div align="center">
-
-[![en](https://img.shields.io/badge/lang-en-blue.svg)](README.md)
-
-<!--
-  <img src="docs/cover.png" alt="yandex-search" width="100%">
--->
-
 # yandex-search-cli
 
-**CLI для [Yandex Search API](https://yandex.cloud/en/services/search-api) — веб-поиск и генеративный поиск YandexGPT из терминала.**
+**Командная интеграция для повторяемых исследований: поиск Яндекса, ответы с источниками, поиск изображений и статистика запросов.**
 
-[![PyPI](https://img.shields.io/pypi/v/yandex-search-cli?color=ff6a00&label=PyPI)](https://pypi.org/project/yandex-search-cli/)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-ff6a00.svg)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/license-MIT-ff6a00.svg)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/nolan-vale/yandex-search-cli?style=social)](https://github.com/nolan-vale/yandex-search-cli)
+[English](README.md)
 
-</div>
+[![PyPI](https://img.shields.io/pypi/v/yandex-search-cli?color=334155&label=PyPI)](https://pypi.org/project/yandex-search-cli/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-334155.svg)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-6B705C.svg)](LICENSE)
 
----
+## Назначение и вклад
 
-`yandex-search-cli` оборачивает [Yandex Search API](https://yandex.cloud/en/services/search-api) в пять команд терминала: веб-поиск, генеративный поиск YandexGPT, поиск картинок, обратный поиск по картинке и Wordstat. Все команды выводят `--json` для скриптов и агентов.
+Инструмент связывает существующие сервисы Яндекса со скриптами и AI-агентами: позволяет собирать источники, получать ответы со ссылками и использовать структурированные результаты в дальнейшей работе. Поиск, генерацию и статистику предоставляет Яндекс; этот репозиторий — интеграция, а не собственная поисковая система или AI-модель.
 
-## Запустить за 60 секунд
+Проект создан с coding-агентами в рамках независимой практики [Nolan Vale](https://github.com/nolan-vale). Мой вклад: постановка задачи, требования к интерфейсу, направление реализации с AI, проверка результата и итерации. **Nolan Vale Tools** — название независимых публичных проектов.
 
-**Шаг 1 — Установка:**
+## Установка и настройка
+
 ```bash
 uv tool install yandex-search-cli
+export YANDEX_API_KEY=your-key
+export YANDEX_FOLDER_ID=your-folder-id
+yandex-search "обработка документов рабочий процесс" --json
 ```
 
-> Нет `uv`? Запусти `curl -LsSf https://astral.sh/uv/install.sh | sh`, или используй `pip install yandex-search-cli`.
+Можно использовать `pip install yandex-search-cli` в подходящем Python-окружении. Для Search API нужен соответствующий доступ в Yandex Cloud. Также поддерживается файл `~/.search-api/config.json` с полями `apiKey` и `folderId`. Это файл с секретными данными: не помещайте его в репозиторий.
 
-**Шаг 2 — Настройка Yandex Cloud:**
-1. Зарегистрируйся на [cloud.yandex.ru](https://cloud.yandex.ru)
-2. Создай сервисный аккаунт и API-ключ в разделе **IAM**
-3. Включи **Yandex Search API** для своего облака ([инструкция](https://yandex.cloud/en/docs/search-api/quickstart))
-4. Скопируй **API-ключ** и **Folder ID** из консоли
-
-**Шаг 3 — Укажи credentials:**
-```bash
-mkdir -p ~/.search-api
-echo '{"apiKey": "твой-ключ", "folderId": "твой-folder-id"}' > ~/.search-api/config.json
-```
-
-> Можно также через переменные окружения: `export YANDEX_API_KEY=... && export YANDEX_FOLDER_ID=...`
-
-**Шаг 4 — Поиск:**
-```bash
-yandex-search "умный город цифровая платформа"
-```
+У отдельных сервисов могут отличаться требования к авторизации. Настройки, в том числе для Wordstat, описаны в [полной документации](docs/USAGE.md).
 
 ## Команды
 
-| Команда | Что делает |
+| Команда | Назначение |
 |---|---|
-| `yandex-search <запрос>` | Веб-поиск: возвращает title, URL, домен, дату, фрагменты текста. |
-| `yandex-gen <запрос>` | Генеративный поиск: YandexGPT пишет ответ с цитированием каждого источника. |
-| `yandex-image-search <запрос>` | Поиск картинок по текстовому запросу. |
-| `yandex-image-search-by-image` | Обратный поиск — найти страницы с данной картинкой (по URL или CBIR ID). |
-| `yandex-wordstat <top\|dynamics\|regions\|regions-tree>` | Статистика частотности запросов Yandex Wordstat. |
+| `yandex-search <query>` | Веб-результаты: заголовки, URL, домены, даты и фрагменты |
+| `yandex-gen <query>` | Генеративный ответ YandexGPT со ссылками на источники |
+| `yandex-image-search <query>` | Поиск изображений по тексту |
+| `yandex-image-search-by-image` | Поиск по изображению: URL или CBIR ID |
+| `yandex-wordstat <top\|dynamics\|regions\|regions-tree>` | Статистика частотности запросов, динамика и региональные данные |
 
-Все команды принимают `--json` — удобно для `jq`, скриптов и AI-агентов.
+Команды поддерживают `--json` для скриптов и AI-агентов.
 
 ## Примеры
 
 ```bash
-# Обычный поиск
-yandex-search "умный город цифровая платформа монография"
-
-# Только с конкретного сайта
+# Поиск с ограничением по домену
 yandex-search "async python" --site habr.com
 
-# Больше результатов, поиск по .com-индексу
+# Индекс и количество результатов
 yandex-search "machine learning" -t com -n 20
 
-# Генеративный ответ — YandexGPT с источниками
-yandex-gen "в чём разница между монолитом и микросервисами"
+# Ответ со ссылками на источники
+yandex-gen "подходы к автоматизации обработки документов"
 
-# JSON: извлечь все URL
+# Получить URL из структурированного вывода
 yandex-search "запрос" --json | jq -r '.[].url'
 
-# JSON: только .gov.ru домены
-yandex-search "нормативные акты" --json \
-  | jq '[.[] | select(.domain | test("gov\\.ru"))]'
-
-# Поиск картинок по тексту
+# Поиск изображений
 yandex-image-search "python logo"
-
-# Обратный поиск по картинке
 yandex-image-search-by-image --url "https://example.com/photo.jpg"
 
-# Wordstat: самые частые запросы по ключевому слову
+# Статистика запросов
 yandex-wordstat top "python framework" -n 20
-
-# Wordstat: частота запросов во времени
 yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01
-
-# Wordstat: география запросов
 yandex-wordstat regions "python framework" --scope cities
 ```
 
-## Справочник параметров
+## Параметры
 
-**`yandex-search`**
-
-| Флаг | По умолчанию | Описание |
+| Флаг `yandex-search` | По умолчанию | Назначение |
 |---|---|---|
 | `-n` / `--num-results` | `10` | Количество результатов |
-| `-t` / `--type` | `ru` | Индекс: `ru` · `com` · `tr` · `kk` · `be` · `uz` |
-| `-r` / `--region` | — | Код региона (например, `213` — Москва) |
-| `-p` / `--page` | `0` | Номер страницы (с нуля) |
-| `--site` | — | Ограничить поиск доменом |
-| `--json` | off | JSON-массив: `[{title, url, domain, date, passages}]` |
+| `-t` / `--type` | `ru` | Индекс: `ru`, `com`, `tr`, `kk`, `be`, `uz` |
+| `-r` / `--region` | — | Код региона провайдера |
+| `-p` / `--page` | `0` | Номер страницы с нуля |
+| `--site` | — | Ограничение доменом |
+| `--json` | off | Структурированный JSON-вывод |
 
-**`yandex-gen`**
+`yandex-gen` поддерживает `--site` и `--json`. Для обратного поиска доступны `--url` или `--cbir-id`, а также `--site`, `--page`, `--family-mode` и `--json`. Параметры остальных команд проверяйте в `--help` и [docs/USAGE.md](docs/USAGE.md).
 
-| Флаг | По умолчанию | Описание |
-|---|---|---|
-| `--site` | — | Ограничить источники доменом |
-| `--json` | off | JSON-ответ YandexGPT |
-
-**`yandex-image-search-by-image`:** `--url` / `--cbir-id` (одно обязательно), `--site`, `--page`, `--family-mode`, `--json`
-
-**`yandex-wordstat`:** подкоманды `top`, `dynamics`, `regions`, `regions-tree` — см. [полную документацию](docs/USAGE.md)
-
-## Для AI-агентов и скриптов
-
-`yandex-search` создан для вызова из AI-ассистентов (Claude Code, Codex, Cursor и др.). Все команды stateless, read-only, завершаются чисто.
+## Работа со скриптами
 
 ```bash
-# Поиск → URL → обработка
-yandex-search "монографии по теме" --json | jq -r '.[].url' | head -5
-
-# Сбор результатов с нескольких страниц
 for page in 0 1 2; do
   yandex-search "запрос" -p $page --json
 done | jq -s 'add'
 ```
 
-Смотри [AGENTS.md](AGENTS.md) — JSON-схемы, все флаги и паттерны для агентов.
+[AGENTS.md](AGENTS.md) содержит дополнительные инструкции по интеграции.
 
-→ **[Полная документация](docs/USAGE.md)**
+## Данные и проверка результатов
 
----
+Запросы и другие входные данные передаются внешним сервисам. Это не локальная поисковая система. Защищайте ключи, отправляйте только разрешённые материалы и проверяйте источники и сгенерированные ответы перед использованием в решениях или внешней переписке.
 
-Built by [Nolan Vale](https://github.com/nolan-vale)  
-Part of **Nolan Vale Tools** — practical open-source utilities for search, automation, AI agents, and developer workflows.
+Доступность функций зависит от соответствующего сервиса Яндекса. Интеграция не гарантирует качество источников или пригодность результата для конкретной задачи.
+
+[Полная документация](docs/USAGE.md) · [Английский обзор](README.md).
+
+MIT — Nolan Vale. См. [LICENSE](LICENSE).
