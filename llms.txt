@@ -1,6 +1,10 @@
 # yandex-search-cli
 
-> CLI for Yandex Search API and YandexGPT. Provides structured web search, image search, reverse image search, generative search, and Wordstat query-frequency statistics from terminal with JSON output for scripts, developers, and AI agents.
+> A command-line integration for repeatable research through Yandex web search, cited answers, image search, reverse image search, and query-frequency statistics.
+
+## Contribution and scope
+
+Built with AI coding agents as part of Nolan Vale's independent product and workflow-automation work. Nolan defines requirements, directs implementation, checks results, and iterates. Yandex provides the underlying search, generation, and statistics; this repository connects those services to scripts and agents.
 
 ## Install
 
@@ -8,86 +12,67 @@
 uv tool install yandex-search-cli
 ```
 
-or:
-
-```bash
-pip install yandex-search-cli
-```
+Alternatively, use pip install yandex-search-cli in a suitable Python environment.
 
 ## Setup
 
-Option 1 (recommended):
-
-```bash
-mkdir -p ~/.search-api
-echo '{"apiKey": "your-key", "folderId": "your-folder-id"}' > ~/.search-api/config.json
-```
-
-Option 2 (env vars):
+For Search API access:
 
 ```bash
 export YANDEX_API_KEY=your-key
 export YANDEX_FOLDER_ID=your-folder-id
 ```
 
-Requires a Yandex Cloud account with Search API enabled: https://yandex.cloud/en/docs/search-api/quickstart
+A configuration file at ~/.search-api/config.json with apiKey and folderId is also supported. Keep credentials out of source control. Consult docs/USAGE.md for service-specific setup and credentials, including Wordstat.
 
 ## Commands
 
-- `yandex-search <query>` — structured Yandex web search from terminal. Flags: --json, --num-results, --type (ru|com|tr|kk|be|uz), --region, --page, --site
-- `yandex-gen <query>` — YandexGPT answer generation with search context. Flags: --json, --site
-- `yandex-image-search <query>` — image search by text query. Flags: --json, --num-results, --type, --region, --page, --site
-- `yandex-image-search-by-image (--url URL | --cbir-id ID)` — reverse image search, find pages containing a given image. Flags: --site, --page, --family-mode (none|moderate|strict), --json
-- `yandex-wordstat <top|dynamics|regions|regions-tree>` — Yandex Wordstat query-frequency statistics. `top <phrase>`: most popular queries; `dynamics <phrase> --from DATE`: frequency over time; `regions <phrase>`: geographic distribution; `regions-tree`: supported region IDs
+- `yandex-search <query>`: structured search. Flags: --json, --num-results, --type (ru|com|tr|kk|be|uz), --region, --page, --site.
+- `yandex-gen <query>`: generated answer with source references. Flags: --json, --site.
+- `yandex-image-search <query>`: image search by text. Flags: --json, --num-results, --type, --region, --page, --site.
+- `yandex-image-search-by-image (--url URL | --cbir-id ID)`: reverse image search. Flags: --site, --page, --family-mode, --json.
+- `yandex-wordstat <top|dynamics|regions|regions-tree>`: query-frequency statistics. See installed-command help and docs/USAGE.md for options.
 
-## Best for
+## Output reference
 
-- Russian-language search
-- AI agents
-- terminal automation
-- JSON output
-- developer productivity
-- image search and reverse image search
-- keyword research / SEO query-frequency data (Wordstat)
+- Web search: [{title, url, domain, date, passages[]}].
+- Generative search: {message{content, role}, sources[{used, title, url}], isAnswerRejected, fixedMisspellQuery}.
+- Image search: [{url, domain, title, thumbnail_url, width, height, page_url, format}].
+- Reverse image search: {images[{url, format, width, height, passage, host, pageTitle, pageUrl}], page, id}.
+- Wordstat top: {totalCount, results[{phrase, count}], associations[{phrase, count}]}.
+- Wordstat dynamics: {results[{date, count, share}]}.
+- Wordstat regions: {results[{region, count, share, affinityIndex}]}.
+- Wordstat regions-tree: {regions[{id, label, children[]}]}.
 
-## JSON output
-
-yandex-search returns: [{title, url, domain, date, passages[]}]
-yandex-gen returns: {message{content, role}, sources[{used, title, url}], isAnswerRejected, fixedMisspellQuery}
-yandex-image-search returns: [{url, domain, title, thumbnail_url, width, height, page_url, format}]
-yandex-image-search-by-image returns: {images[{url, format, width, height, passage, host, pageTitle, pageUrl}], page, id}
-yandex-wordstat top returns: {totalCount, results[{phrase, count}], associations[{phrase, count}]}
-yandex-wordstat dynamics returns: {results[{date, count, share}]}
-yandex-wordstat regions returns: {results[{region, count, share, affinityIndex}]}
-yandex-wordstat regions-tree returns: {regions[{id, label, children[]}]}
-
-## Quick examples
+## Examples
 
 ```bash
-yandex-search "smart city digital platform" --json
+yandex-search "document review workflow" --json
 yandex-search "query" --site habr.com --json
-yandex-gen "explain microservices vs monolith" --json
+yandex-gen "document processing approaches" --json
 yandex-search "query" --json | jq -r '.[].url'
 yandex-image-search "python logo" --json
 yandex-image-search-by-image --url "https://example.com/photo.jpg" --json
 yandex-wordstat top "python framework" -n 20 --json
-yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01 --json
 ```
+
+## Data and review
+
+Queries and other request inputs are sent to external services. Protect credentials, submit only material you are authorized to share, and verify sources and generated answers before using them in decisions. Provider availability and source quality are not guaranteed by this integration.
 
 ## Key files
 
-- `README.md`: English overview, install, quickstart
-- `README.ru.md`: Russian overview and examples
-- `AGENTS.md`: instructions for AI coding agents
-- `docs/USAGE.md`: full usage guide
-- `src/yandex_cli/client.py`: YandexSearchClient request/response contract layer
-- `src/yandex_cli/parsers.py`: web/image XML rawData parsers
-- `pyproject.toml`: package metadata and CLI entry points
+- README.md: purpose, contribution, setup, and limitations.
+- README.ru.md: Russian documentation.
+- AGENTS.md: agent integration guidance.
+- docs/USAGE.md: usage and service-specific setup.
+- src/yandex_cli/client.py: request/response layer.
+- src/yandex_cli/parsers.py: response parsing.
+- pyproject.toml: dependencies and entry points.
 
 ## Links
 
-- GitHub: https://github.com/nolan-vale/yandex-search-cli
+- Repository: https://github.com/nolan-vale/yandex-search-cli
+- Product-builder portfolio: https://github.com/nolan-vale
 - PyPI: https://pypi.org/project/yandex-search-cli/
-- Yandex Search API docs: https://yandex.cloud/en/docs/search-api/
-- Full CLI docs: https://github.com/nolan-vale/yandex-search-cli/blob/main/docs/USAGE.md
-- For agents: https://github.com/nolan-vale/yandex-search-cli/blob/main/AGENTS.md
+- Search API documentation: https://yandex.cloud/en/docs/search-api/
