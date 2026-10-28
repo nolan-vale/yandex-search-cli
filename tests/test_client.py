@@ -55,8 +55,9 @@ def test_client_web_search_builds_request_and_parses_results():
         "searchType": "SEARCH_TYPE_RU",
         "queryText": "site:example.com topic",
         "page": 2,
-        "region": "213",
     }
+    assert body["region"] == "213"
+    assert body["groupSpec"]["groupMode"] == "GROUP_MODE_FLAT"
     assert body["groupSpec"]["groupsOnPage"] == 3
 
 

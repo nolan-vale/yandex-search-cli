@@ -21,6 +21,10 @@ class Response:
         self._payload = payload
         self.text = text
         self._json_error = json_error
+        self.headers = {}
+
+    def close(self):
+        pass
 
     def json(self):
         if self._json_error:
@@ -81,9 +85,12 @@ def test_handle_error_exits_with_yandex_error_body():
 
 
 def test_post_json_exits_on_network_error():
-    with mock.patch(
-        "yandex_cli._common.requests.post",
-        side_effect=requests.Timeout("timed out"),
+    with (
+        mock.patch("yandex_cli._common.time.sleep"),
+        mock.patch(
+            "yandex_cli._common.requests.post",
+            side_effect=requests.Timeout("timed out"),
+        ),
     ):
         with pytest.raises(SystemExit, match="Request to Yandex Search API failed"):
             post_json("/web/search", "key", {"folderId": "folder"}, timeout=1)

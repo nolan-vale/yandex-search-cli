@@ -31,7 +31,7 @@ CLI for [Yandex Search API](https://yandex.cloud/en/services/search-api) and Yan
 
 `yandex-search-cli` wraps the [Yandex Search API](https://yandex.cloud/en/services/search-api) in five terminal commands. It is the practical way to query Yandex — the dominant search engine for Russian-language content — from scripts, pipelines, and AI agent workflows.
 
-`yandex-search` performs web search and returns structured results: title, URL, domain, publication date, and text passages. `yandex-gen` uses YandexGPT to answer a question and cite the sources it used. `yandex-image-search` and `yandex-image-search-by-image` search images by text query or by a reference image. `yandex-wordstat` returns query-frequency statistics — top queries, trends over time, and regional distribution.
+`yandex-search` performs web search and returns structured results: title, URL, domain, modification date, and text passages. `yandex-gen` uses YandexGPT to answer a question and cite the sources it used. `yandex-image-search` and `yandex-image-search-by-image` search images by text query or by a reference image. `yandex-wordstat` returns query-frequency statistics — top queries, trends over time, and regional distribution.
 
 All commands output clean `--json` for use in scripts and AI agents.
 
@@ -105,10 +105,13 @@ yandex-search "regulations" --json \
 
 | Flag | Default | Description |
 |---|---|---|
-| `-n` / `--num-results` | `10` | Number of results |
+| `-n` / `--num-results` | `10` | Results per page (1–100) |
 | `-t` / `--type` | `ru` | Search index: `ru` · `com` · `tr` · `kk` · `be` · `uz` |
 | `-r` / `--region` | — | Region code (e.g. `213` for Moscow) |
-| `-p` / `--page` | `0` | Page number, zero-indexed |
+| `-p` / `--page` | `0` | Starting page number, zero-indexed |
+| `--pages` | `1` | Consecutive pages; deduplicate URLs across pages |
+| `--timeout` | `30` | HTTP connect/read timeout in seconds |
+| `--version` | — | Show package version without authentication |
 | `--site` | — | Restrict results to this domain |
 | `--json` | off | JSON array: `[{title, url, domain, date, passages}]` |
 
@@ -129,9 +132,7 @@ yandex-search "regulations" --json \
 yandex-search "topic" --json | jq -r '.[].url'
 
 # Collect results across multiple pages
-for page in 0 1 2; do
-  yandex-search "query" -p $page --json
-done | jq -s 'add'
+yandex-search "query" --pages 3 --json
 
 # Generative answer as JSON
 yandex-gen "question" --json | jq '.message.content'
@@ -150,7 +151,7 @@ JSON schema for `yandex-search --json`:
 ]
 ```
 
-See [AGENTS.md](AGENTS.md) for full schemas, exit codes, and environment reference.
+See [the usage guide](docs/USAGE.md) for schemas, exit codes, and environment reference.
 
 → [Full documentation](docs/USAGE.md)
 
@@ -169,3 +170,14 @@ Spec first, then a plan, then implementation with AI coding agents (Claude Code,
 
 Built by [Nolan Vale](https://github.com/nolan-vale)  
 Part of **Nolan Vale Tools** — practical open-source utilities for search, automation, AI agents, and developer workflows.
+
+## Research workflow updates
+
+Use `yandex-search QUERY --pages 3 -n 10 --json` to collect consecutive pages
+with duplicate URLs removed. All commands support `--timeout` (default 30 seconds)
+and `--version`; Wordstat global flags precede the subcommand. Transient retrieval
+failures retry with bounded backoff. XML API errors exit nonzero instead of
+appearing as an empty result set; code 15 still means no matches. Web search
+regions now use the correct API field. Image search does not support regions.
+The `date` field is page modification time, so confirm article publication metadata
+at the publisher. Details: [usage guide](docs/USAGE.md).

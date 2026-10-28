@@ -12,6 +12,7 @@ from yandex_cli._common import post_json
 class YandexSearchClient:
     api_key: str
     folder_id: str
+    timeout: float = 30
 
     def web_search(
         self,
@@ -21,6 +22,7 @@ class YandexSearchClient:
         num_results: int,
         page: int,
         region: str | None = None,
+        pages: int = 1,
     ) -> list[dict]:
         body: dict = {
             "folderId": self.folder_id,
@@ -30,16 +32,31 @@ class YandexSearchClient:
                 "page": page,
             },
             "groupSpec": {
+                "groupMode": "GROUP_MODE_FLAT",
                 "groupsOnPage": num_results,
                 "docsInGroup": 1,
             },
             "maxPassages": 2,
         }
         if region:
-            body["query"]["region"] = region
+            body["region"] = region
 
-        data = self._post_dict("/web/search", body, timeout=15, label="web search")
-        return parse_web_xml(data.get("rawData"))
+        docs = []
+        seen = set()
+        for offset in range(pages):
+            request_body = {**body, "query": {**body["query"], "page": page + offset}}
+            data = self._post_dict(
+                "/web/search", request_body, timeout=self.timeout, label="web search"
+            )
+            batch = parse_web_xml(data.get("rawData"))
+            if not batch:
+                break
+            for doc in batch:
+                url = doc["url"]
+                if pages == 1 or not url or url not in seen:
+                    docs.append(doc)
+                    seen.add(url)
+        return docs
 
     def generative_search(self, query: str, *, site: str | None = None) -> dict:
         body: dict = {
@@ -50,7 +67,7 @@ class YandexSearchClient:
         if site:
             body["site"] = [site]
 
-        data = post_json("/gen/search", self.api_key, body, timeout=30)
+        data = post_json("/gen/search", self.api_key, body, timeout=self.timeout)
         if isinstance(data, list):
             if not data:
                 sys.exit("Yandex generative search returned an empty response")
@@ -82,9 +99,11 @@ class YandexSearchClient:
             "docsOnPage": num_results,
         }
         if region:
-            body["query"]["region"] = region
+            sys.exit("Yandex image search does not support --region")
 
-        data = self._post_dict("/image/search", body, timeout=15, label="image search")
+        data = self._post_dict(
+            "/image/search", body, timeout=self.timeout, label="image search"
+        )
         return parse_image_xml(data.get("rawData"))
 
     def reverse_image_search(
@@ -109,7 +128,7 @@ class YandexSearchClient:
         return self._post_dict(
             "/image/search_by_image",
             body,
-            timeout=15,
+            timeout=self.timeout,
             label="reverse image search",
         )
 
@@ -133,7 +152,7 @@ class YandexSearchClient:
         return self._post_dict(
             "/wordstat/topRequests",
             body,
-            timeout=15,
+            timeout=self.timeout,
             label="wordstat top",
         )
 
@@ -162,7 +181,7 @@ class YandexSearchClient:
         return self._post_dict(
             "/wordstat/dynamics",
             body,
-            timeout=15,
+            timeout=self.timeout,
             label="wordstat dynamics",
         )
 
@@ -183,7 +202,7 @@ class YandexSearchClient:
         return self._post_dict(
             "/wordstat/regions",
             body,
-            timeout=15,
+            timeout=self.timeout,
             label="wordstat regions",
         )
 
@@ -191,12 +210,12 @@ class YandexSearchClient:
         return self._post_dict(
             "/wordstat/getRegionsTree",
             {"folderId": self.folder_id},
-            timeout=15,
+            timeout=self.timeout,
             label="wordstat regions tree",
         )
 
     def _post_dict(
-        self, path: str, body: dict[str, Any], *, timeout: int, label: str
+        self, path: str, body: dict[str, Any], *, timeout: float, label: str
     ) -> dict:
         data = post_json(path, self.api_key, body, timeout=timeout)
         if not isinstance(data, dict):

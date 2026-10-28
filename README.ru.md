@@ -145,3 +145,14 @@ done | jq -s 'add'
 
 Built by [Nolan Vale](https://github.com/nolan-vale)  
 Part of **Nolan Vale Tools** — practical open-source utilities for search, automation, AI agents, and developer workflows.
+
+## Обновления для ресерча
+
+`yandex-search QUERY --pages 3 -n 10 --json` собирает последовательные страницы
+и удаляет повторы URL. Все команды поддерживают `--timeout` (30 секунд по
+умолчанию) и `--version`; у Wordstat общие flags идут перед подкомандой.
+Временные сбои поиска повторяются с backoff. XML-ошибки API теперь возвращают
+ненулевой exit code; код 15 по-прежнему означает отсутствие результатов.
+Регион web search передаётся в правильном поле API, image search регион не
+поддерживает. Поле `date` отражает изменение страницы, дату публикации статьи
+нужно проверить у издателя. Подробнее — в [документации](docs/USAGE.md).

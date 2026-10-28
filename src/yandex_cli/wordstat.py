@@ -3,7 +3,7 @@ import argparse
 import json
 from datetime import datetime, timezone
 
-from yandex_cli._common import creds, positive_int
+from yandex_cli._common import add_common_args, creds, positive_int
 from yandex_cli.client import YandexSearchClient
 
 DEVICES = {
@@ -120,6 +120,7 @@ def wordstat() -> None:
   yandex-wordstat regions-tree
 """,
     )
+    add_common_args(p)
     sub = p.add_subparsers(dest="command", required=True)
 
     top_p = sub.add_parser("top", help="most popular queries containing a keyword")
@@ -176,7 +177,7 @@ def wordstat() -> None:
 
     args = p.parse_args()
     api_key, folder_id = creds()
-    client = YandexSearchClient(api_key, folder_id)
+    client = YandexSearchClient(api_key, folder_id, timeout=args.timeout)
 
     if args.command == "top":
         data = client.wordstat_top(

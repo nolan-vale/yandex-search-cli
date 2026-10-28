@@ -5,9 +5,10 @@ import json
 
 from yandex_cli._common import (
     SEARCH_TYPES,
+    add_common_args,
     creds,
     nonnegative_int,
-    positive_int,
+    result_count,
 )
 from yandex_cli.client import YandexSearchClient
 from yandex_cli.parsers import parse_image_xml
@@ -70,10 +71,11 @@ def search_by_image() -> None:
         help="content filtering: none, moderate, strict",
     )
     p.add_argument("--json", action="store_true", help="JSON output")
+    add_common_args(p)
     args = p.parse_args()
 
     api_key, folder_id = creds()
-    client = YandexSearchClient(api_key, folder_id)
+    client = YandexSearchClient(api_key, folder_id, timeout=args.timeout)
     data = client.reverse_image_search(
         url=args.url,
         cbir_id=args.cbir_id,
@@ -132,7 +134,7 @@ def search() -> None:
     p.add_argument(
         "-n",
         "--num-results",
-        type=positive_int,
+        type=result_count,
         default=10,
         help="number of results (default: 10)",
     )
@@ -163,11 +165,16 @@ def search() -> None:
         action="store_true",
         help="JSON output: array of {url, domain, title, thumbnail_url, width, height, page_url, format}",
     )
+    add_common_args(p)
     args = p.parse_args()
+    query_text = f"site:{args.site} {args.query}" if args.site else args.query
+    if args.region:
+        p.error("Yandex image search does not support --region")
+    if not args.query.strip() or len(query_text) > 400:
+        p.error("query must be non-empty and at most 400 characters including --site")
 
     api_key, folder_id = creds()
-    query_text = f"site:{args.site} {args.query}" if args.site else args.query
-    client = YandexSearchClient(api_key, folder_id)
+    client = YandexSearchClient(api_key, folder_id, timeout=args.timeout)
     images = client.image_search(
         query_text,
         search_type=SEARCH_TYPES[args.type],

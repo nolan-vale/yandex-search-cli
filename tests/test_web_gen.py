@@ -67,13 +67,14 @@ def test_search_json_entrypoint_outputs_parsed_docs(monkeypatch):
 
     payload = json.loads(stdout.getvalue())
     assert payload[0]["url"] == "https://example.com/page"
-    client_class.assert_called_once_with("key", "folder")
+    client_class.assert_called_once_with("key", "folder", timeout=30)
     client.web_search.assert_called_once_with(
         "site:example.com topic",
         search_type="SEARCH_TYPE_RU",
         num_results=3,
         page=0,
         region=None,
+        pages=1,
     )
 
 

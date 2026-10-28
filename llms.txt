@@ -91,3 +91,14 @@ yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01 -
 - Yandex Search API docs: https://yandex.cloud/en/docs/search-api/
 - Full CLI docs: https://github.com/nolan-vale/yandex-search-cli/blob/main/docs/USAGE.md
 - For agents: https://github.com/nolan-vale/yandex-search-cli/blob/main/AGENTS.md
+
+## Research workflow (0.2.3)
+
+- `yandex-search QUERY --pages 3 -n 10 --json`: collect consecutive pages from --page, deduplicate exact URLs; stop on an empty page. A later-page failure exits nonzero without partial success JSON.
+- -n accepts 1–100 per page; total search window is 250 results. Query plus --site must be non-empty and <=400 characters.
+- All commands: --timeout SECONDS (default 30, per HTTP request), --version. For Wordstat, put these before the subcommand.
+- Web --region is supported for ru/tr and sent at the request root. Image search does not support --region.
+- Retrieval retries transient network failures and HTTP 429/500/502/503/504, up to 3 attempts, with bounded backoff/Retry-After. Generative requests are not replayed.
+- XML error 15 is no matches; other XML errors exit nonzero. Diagnostics use stderr and redact keys/folder IDs. Invalid arguments exit 2.
+- JSON schema unchanged. date is page modification time from modtime, not verified article publication date.
+- Verify DOI/authors/year at the primary source. Search discovers links; PDFs are downloaded separately.

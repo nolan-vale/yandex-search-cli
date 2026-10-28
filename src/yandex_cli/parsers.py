@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 import defusedxml.ElementTree as ET
 
 from yandex_cli._common import parse_raw_xml, xml_text
@@ -10,16 +12,20 @@ def parse_web_xml(raw_b64: object) -> list[dict]:
     docs = []
     for doc in root.iter("doc"):
         modtime = xml_text(doc.find("modtime"))
-        date = modtime[:8] if len(modtime) >= 8 else ""
-        if date:
-            date = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
+        parsed_date = ""
+        try:
+            parsed_date = date.fromisoformat(
+                modtime[:10] if "-" in modtime[:10] else modtime[:8]
+            ).isoformat()
+        except ValueError:
+            pass
         passages = [xml_text(p) for p in doc.iter("passage") if xml_text(p)]
         docs.append(
             {
                 "title": xml_text(doc.find("title")),
                 "url": xml_text(doc.find("url")),
                 "domain": xml_text(doc.find("domain")),
-                "date": date,
+                "date": parsed_date,
                 "passages": passages,
             }
         )

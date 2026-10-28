@@ -4,8 +4,13 @@ import argparse
 import base64
 import binascii
 import json
+import math
 import os
 import sys
+import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
@@ -36,17 +41,19 @@ def creds() -> tuple[str, str]:
     if config_path.exists():
         try:
             cfg = json.loads(config_path.read_text(encoding="utf-8"))
+            if not isinstance(cfg, dict):
+                raise ValueError("configuration must be a JSON object")
             api_key = cfg["apiKey"]
             folder_id = cfg["folderId"]
             if not isinstance(api_key, str) or not api_key.strip():
                 raise ValueError("apiKey must be a non-empty string")
             if not isinstance(folder_id, str) or not folder_id.strip():
                 raise ValueError("folderId must be a non-empty string")
-            return api_key, folder_id
+            return api_key.strip(), folder_id.strip()
         except (OSError, KeyError, ValueError, json.JSONDecodeError) as e:
             sys.exit(f"Invalid config at {config_path}: {e}")
-    api_key = os.environ.get("YANDEX_API_KEY", "")
-    folder_id = os.environ.get("YANDEX_FOLDER_ID", "")
+    api_key = os.environ.get("YANDEX_API_KEY", "").strip()
+    folder_id = os.environ.get("YANDEX_FOLDER_ID", "").strip()
     if not api_key or not folder_id:
         sys.exit(
             "Credentials not found.\n"
@@ -80,6 +87,37 @@ def nonnegative_int(value: str) -> int:
     return parsed
 
 
+def result_count(value: str) -> int:
+    parsed = positive_int(value)
+    if parsed > 100:
+        raise argparse.ArgumentTypeError("must be between 1 and 100")
+    return parsed
+
+
+def positive_seconds(value: str) -> float:
+    try:
+        parsed = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a number") from exc
+    if not math.isfinite(parsed) or parsed <= 0:
+        raise argparse.ArgumentTypeError("must be a finite number > 0")
+    return parsed
+
+
+def add_common_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--timeout",
+        type=positive_seconds,
+        default=30,
+        help="HTTP connect/read timeout in seconds (default: 30)",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {version('yandex-search-cli')}",
+    )
+
+
 def _error_detail(resp: requests.Response) -> str:
     try:
         data = resp.json()
@@ -99,7 +137,7 @@ def _error_detail(resp: requests.Response) -> str:
     return str(data).strip()
 
 
-def handle_error(resp: requests.Response) -> None:
+def handle_error(resp: requests.Response, secrets: tuple[str, ...] = ()) -> None:
     if resp.status_code == 401:
         sys.exit("Authentication failed — check your API key")
     if resp.status_code == 403:
@@ -108,22 +146,53 @@ def handle_error(resp: requests.Response) -> None:
         sys.exit("Rate limit exceeded — slow down or upgrade your Yandex Cloud quota")
     if resp.status_code >= 400:
         detail = _error_detail(resp)
+        for secret in sorted(filter(None, secrets), key=len, reverse=True):
+            detail = detail.replace(secret, "[REDACTED]")
         suffix = f": {detail[:500]}" if detail else ""
         sys.exit(f"Yandex Search API error {resp.status_code}{suffix}")
 
 
-def post_json(path: str, api_key: str, body: dict[str, Any], timeout: int) -> Any:
+def _retry_delay(resp: requests.Response, attempt: int) -> float:
+    value = getattr(resp, "headers", {}).get("Retry-After", "")
     try:
-        resp = requests.post(
-            f"{BASE_URL}{path}",
-            headers=headers(api_key),
-            json=body,
-            timeout=timeout,
-        )
-    except requests.RequestException as e:
-        sys.exit(f"Request to Yandex Search API failed: {e}")
+        delay = float(value)
+    except (TypeError, ValueError):
+        try:
+            delay = (
+                parsedate_to_datetime(value) - datetime.now(timezone.utc)
+            ).total_seconds()
+        except (TypeError, ValueError, OverflowError):
+            delay = 2**attempt
+    return min(30, max(0, delay)) if math.isfinite(delay) else 2**attempt
 
-    handle_error(resp)
+
+def post_json(path: str, api_key: str, body: dict[str, Any], timeout: float) -> Any:
+    # Retry only retrieval calls. Generative requests may incur additional work.
+    attempts = 1 if path == "/gen/search" else 3
+    for attempt in range(attempts):
+        try:
+            resp = requests.post(
+                f"{BASE_URL}{path}",
+                headers=headers(api_key),
+                json=body,
+                timeout=timeout,
+            )
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            if attempt + 1 < attempts:
+                time.sleep(2**attempt)
+                continue
+            sys.exit(f"Request to Yandex Search API failed ({type(exc).__name__})")
+        except requests.RequestException as exc:
+            sys.exit(f"Request to Yandex Search API failed ({type(exc).__name__})")
+
+        if resp.status_code in (429, 500, 502, 503, 504) and attempt + 1 < attempts:
+            delay = _retry_delay(resp, attempt)
+            resp.close()
+            time.sleep(delay)
+            continue
+        break
+
+    handle_error(resp, secrets=(api_key, body.get("folderId", "")))
 
     try:
         return resp.json()
@@ -136,7 +205,7 @@ def parse_raw_xml(raw_b64: object, endpoint: str) -> ET.Element:
         sys.exit(f"Yandex {endpoint} response missing rawData")
     try:
         xml_bytes = base64.b64decode(raw_b64, validate=True)
-        return ET.fromstring(xml_bytes.decode("utf-8"))
+        root = ET.fromstring(xml_bytes.decode("utf-8"))
     except (
         binascii.Error,
         UnicodeDecodeError,
@@ -144,3 +213,12 @@ def parse_raw_xml(raw_b64: object, endpoint: str) -> ET.Element:
         DefusedXmlException,
     ) as e:
         sys.exit(f"Yandex {endpoint} response contained invalid rawData XML: {e}")
+    error = root.find(".//error")
+    if error is not None:
+        code = error.get("code", "")
+        if code != "15":
+            safe_code = code if code.isdecimal() else "unknown"
+            sys.exit(
+                f"Yandex {endpoint} XML error {safe_code}; check query, credentials and quota"
+            )
+    return root

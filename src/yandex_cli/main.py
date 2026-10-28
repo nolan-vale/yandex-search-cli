@@ -6,9 +6,11 @@ import textwrap
 
 from yandex_cli._common import (
     SEARCH_TYPES,
+    add_common_args,
     creds as _creds,
     nonnegative_int,
     positive_int,
+    result_count,
 )
 from yandex_cli.client import YandexSearchClient
 from yandex_cli.parsers import parse_web_xml
@@ -72,7 +74,7 @@ def search() -> None:
     p.add_argument(
         "-n",
         "--num-results",
-        type=positive_int,
+        type=result_count,
         default=10,
         help="number of results (default: 10)",
     )
@@ -97,21 +99,37 @@ def search() -> None:
         "--site", default=None, help="restrict results to this domain (e.g. habr.com)"
     )
     p.add_argument(
+        "--pages",
+        type=positive_int,
+        default=1,
+        help="consecutive pages to collect; deduplicate URLs (default: 1)",
+    )
+    p.add_argument(
         "--json",
         action="store_true",
         help="JSON output: array of {title, url, domain, date, passages}",
     )
+    add_common_args(p)
     args = p.parse_args()
+    query_text = f"site:{args.site} {args.query}" if args.site else args.query
+    if not args.query.strip() or len(query_text) > 400:
+        p.error("query must be non-empty and at most 400 characters including --site")
+    if args.region and args.type not in ("ru", "tr"):
+        p.error("--region is supported only for ru/tr search types")
+    if (args.page + args.pages - 1) * args.num_results >= 250:
+        p.error(
+            "requested pages exceed the 250-result search window; reduce --page or --pages"
+        )
 
     api_key, folder_id = _creds()
-    query_text = f"site:{args.site} {args.query}" if args.site else args.query
-    client = YandexSearchClient(api_key, folder_id)
+    client = YandexSearchClient(api_key, folder_id, timeout=args.timeout)
     docs = client.web_search(
         query_text,
         search_type=SEARCH_TYPES[args.type],
         num_results=args.num_results,
         page=args.page,
         region=args.region,
+        pages=args.pages,
     )
 
     if args.json:
@@ -134,10 +152,11 @@ def gen() -> None:
     p.add_argument("query")
     p.add_argument("--site", default=None, help="restrict sources to this domain")
     p.add_argument("--json", action="store_true", help="JSON output")
+    add_common_args(p)
     args = p.parse_args()
 
     api_key, folder_id = _creds()
-    client = YandexSearchClient(api_key, folder_id)
+    client = YandexSearchClient(api_key, folder_id, timeout=args.timeout)
     result = client.generative_search(args.query, site=args.site)
 
     if args.json:

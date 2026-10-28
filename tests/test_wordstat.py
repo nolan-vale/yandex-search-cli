@@ -122,7 +122,7 @@ def test_wordstat_top_json_entrypoint_calls_client(monkeypatch):
         wordstat()
 
     assert json.loads(stdout.getvalue())["results"][0]["phrase"] == "python"
-    client_class.assert_called_once_with("key", "folder")
+    client_class.assert_called_once_with("key", "folder", timeout=30)
     client.wordstat_top.assert_called_once_with(
         "python",
         num_phrases=5,
