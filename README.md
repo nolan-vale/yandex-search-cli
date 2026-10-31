@@ -47,6 +47,10 @@ All commands output clean `--json` for use in scripts and AI agents.
 - Web search via Yandex with domain, date, and passage metadata
 - Generative search via YandexGPT — answers with cited sources
 - Filter results by domain (`--site`)
+- Filter web results by freshness (`--period day|2weeks|month|all`)
+- Sort web results by page update time (`--sort time`, optionally `--order asc`)
+- Limit generative sources by document format, language and date (`--format pdf --lang en --date '>=20250101'`)
+- Continue generative search with a JSON conversation (`--messages-file FILE`, or `-` for stdin)
 - Search `.ru`, `.com`, and regional Yandex indexes
 - Paginate results (`--page`)
 - Filter by region code
@@ -87,11 +91,23 @@ yandex-search "async python" --site habr.com
 # Search the .com Yandex index, more results
 yandex-search "machine learning" -t com -n 20
 
+# Search the last 24 hours
+yandex-search "AI news" --period day --json
+
+# Show recently updated pages first
+yandex-search "AI news" --period month --sort time --json
+
 # Generative answer with cited sources
 yandex-gen "explain the difference between monolith and microservices"
 
 # Restrict generative search to a domain
 yandex-gen "how to configure nginx" --site nginx.org
+
+# Generate an answer from English PDF sources added since January 2025
+yandex-gen "smart city research" --format pdf --lang en --date '>=20250101' --json
+
+# Ask a follow-up using earlier user/assistant messages
+yandex-gen "How do I enable HTTPS?" --messages-file conversation.json
 
 # JSON — extract all URLs
 yandex-search "topic" --json | jq -r '.[].url'
@@ -113,9 +129,25 @@ yandex-search "regulations" --json \
 | `--timeout` | `30` | HTTP connect/read timeout in seconds |
 | `--version` | — | Show package version without authentication |
 | `--site` | — | Restrict results to this domain |
+| `--period` | — | Freshness: `all`, `day` (24 hours), `2weeks`, `month` |
+| `--sort` | relevance | `relevance` or `time` (page update time, newest first) |
+| `--order` | desc | `asc` or `desc`; requires `--sort time` |
 | `--json` | off | JSON array: `[{title, url, domain, date, passages}]` |
 
-**All flags — `yandex-gen`:** `--site`, `--json`
+**All flags — `yandex-gen`:** `--site`, `--format`, `--lang`, `--date`, `--messages-file FILE`, `--json`, `--timeout`, `--version`
+
+Use `--format pdf` to limit source documents to PDF, `--lang en` for an ISO 639-1
+language, and `--date '>=20250101'` for a source date filter. Dates also accept an
+exact day, an inclusive range (`'20250101..20251231'`), a month (`'202501*'`) or a
+year (`'2025*'`). Date filters use Yandex's page-addition date, rather than a
+verified publication date. The [usage guide](docs/USAGE.md#yandex-gen) lists all
+supported formats and date operators. Filters combine with a site and dialogue.
+
+`--messages-file` reads a UTF-8 JSON array of `{role, content}` messages from a
+file, or from stdin when `FILE` is `-`. Roles may be `user`/`assistant` or
+`ROLE_USER`/`ROLE_ASSISTANT`. An optional query is appended as a user message;
+without a query, the array is the complete request. The CLI does not save or
+modify conversation files. See the [dialogue example](docs/USAGE.md#yandex-gen).
 
 **All flags — `yandex-image-search`:** `-n` / `--num-results`, `-t` / `--type`, `-r` / `--region`, `-p` / `--page`, `--site`, `--json`
 

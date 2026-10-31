@@ -1,7 +1,7 @@
 # src/yandex_cli/wordstat.py
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from yandex_cli._common import add_common_args, creds, positive_int
 from yandex_cli.client import YandexSearchClient
@@ -27,7 +27,7 @@ REGION_SCOPES = {
 
 
 def _rfc3339(date_str: str) -> str:
-    dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=UTC)
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 

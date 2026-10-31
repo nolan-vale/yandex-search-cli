@@ -151,9 +151,9 @@ def test_retry_exhaustion_is_bounded():
             "yandex_cli._common.requests.post", return_value=Response(status=503)
         ) as post,
         mock.patch("yandex_cli._common.time.sleep") as sleep,
+        pytest.raises(SystemExit, match="503"),
     ):
-        with pytest.raises(SystemExit, match="503"):
-            post_json("/web/search", "key", {"folderId": "folder"}, timeout=12)
+        post_json("/web/search", "key", {"folderId": "folder"}, timeout=12)
     assert post.call_count == 3
     assert sleep.call_args_list == [mock.call(1), mock.call(2)]
 
@@ -164,19 +164,21 @@ def test_generative_requests_are_not_automatically_replayed():
             "yandex_cli._common.requests.post", return_value=Response(status=503)
         ) as post,
         mock.patch("yandex_cli._common.time.sleep") as sleep,
+        pytest.raises(SystemExit),
     ):
-        with pytest.raises(SystemExit):
-            post_json("/gen/search", "key", {"folderId": "folder"}, timeout=12)
+        post_json("/gen/search", "key", {"folderId": "folder"}, timeout=12)
     assert post.call_count == 1
     sleep.assert_not_called()
 
 
 def test_authentication_failure_does_not_retry():
-    with mock.patch(
-        "yandex_cli._common.requests.post", return_value=Response(status=401)
-    ) as post:
-        with pytest.raises(SystemExit, match="Authentication failed"):
-            post_json("/web/search", "key", {"folderId": "folder"}, timeout=12)
+    with (
+        mock.patch(
+            "yandex_cli._common.requests.post", return_value=Response(status=401)
+        ) as post,
+        pytest.raises(SystemExit, match="Authentication failed"),
+    ):
+        post_json("/web/search", "key", {"folderId": "folder"}, timeout=12)
     assert post.call_count == 1
 
 
@@ -184,14 +186,16 @@ def test_error_body_redacts_credentials():
     response = Response(
         status=400, payload={"message": "bad private-api-key private-folder-id"}
     )
-    with mock.patch("yandex_cli._common.requests.post", return_value=response):
-        with pytest.raises(SystemExit) as exc:
-            post_json(
-                "/web/search",
-                "private-api-key",
-                {"folderId": "private-folder-id"},
-                timeout=12,
-            )
+    with (
+        mock.patch("yandex_cli._common.requests.post", return_value=response),
+        pytest.raises(SystemExit) as exc,
+    ):
+        post_json(
+            "/web/search",
+            "private-api-key",
+            {"folderId": "private-folder-id"},
+            timeout=12,
+        )
     assert "private-api-key" not in str(exc.value)
     assert "private-folder-id" not in str(exc.value)
     assert "[REDACTED]" in str(exc.value)
@@ -207,6 +211,7 @@ def test_error_body_redacts_credentials():
         ["topic", "--timeout", "nan"],
         ["topic", "--timeout", "-1"],
         ["topic", "--pages", "0"],
+        ["topic", "--period", "week"],
         ["topic", "-n", "100", "--pages", "4"],
         ["topic", "-t", "com", "--region", "213"],
     ],

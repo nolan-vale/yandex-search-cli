@@ -8,15 +8,15 @@ import math
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
 import defusedxml.ElementTree as ET
-from defusedxml.common import DefusedXmlException
 import requests
+from defusedxml.common import DefusedXmlException
 
 BASE_URL = "https://searchapi.api.cloud.yandex.net/v2"
 
@@ -42,7 +42,7 @@ def creds() -> tuple[str, str]:
         try:
             cfg = json.loads(config_path.read_text(encoding="utf-8"))
             if not isinstance(cfg, dict):
-                raise ValueError("configuration must be a JSON object")
+                raise TypeError("configuration must be a JSON object")
             api_key = cfg["apiKey"]
             folder_id = cfg["folderId"]
             if not isinstance(api_key, str) or not api_key.strip():
@@ -50,7 +50,7 @@ def creds() -> tuple[str, str]:
             if not isinstance(folder_id, str) or not folder_id.strip():
                 raise ValueError("folderId must be a non-empty string")
             return api_key.strip(), folder_id.strip()
-        except (OSError, KeyError, ValueError, json.JSONDecodeError) as e:
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as e:
             sys.exit(f"Invalid config at {config_path}: {e}")
     api_key = os.environ.get("YANDEX_API_KEY", "").strip()
     folder_id = os.environ.get("YANDEX_FOLDER_ID", "").strip()
@@ -158,9 +158,7 @@ def _retry_delay(resp: requests.Response, attempt: int) -> float:
         delay = float(value)
     except (TypeError, ValueError):
         try:
-            delay = (
-                parsedate_to_datetime(value) - datetime.now(timezone.utc)
-            ).total_seconds()
+            delay = (parsedate_to_datetime(value) - datetime.now(UTC)).total_seconds()
         except (TypeError, ValueError, OverflowError):
             delay = 2**attempt
     return min(30, max(0, delay)) if math.isfinite(delay) else 2**attempt

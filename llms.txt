@@ -34,8 +34,8 @@ Requires a Yandex Cloud account with Search API enabled: https://yandex.cloud/en
 
 ## Commands
 
-- `yandex-search <query>` — structured Yandex web search from terminal. Flags: --json, --num-results, --type (ru|com|tr|kk|be|uz), --region, --page, --site
-- `yandex-gen <query>` — YandexGPT answer generation with search context. Flags: --json, --site
+- `yandex-search <query>` — structured Yandex web search from terminal. Flags: --json, --num-results, --type (ru|com|tr|kk|be|uz), --region, --page, --pages, --site, --period (all|day|2weeks|month), --sort (relevance|time), --order (asc|desc; requires --sort time)
+- `yandex-gen [query]` — YandexGPT answer generation with search context and optional dialogue. Flags: --json, --site, --format (pdf|xls|ods|rtf|ppt|odp|swf|odt|odg|doc), --lang (two-letter ISO 639-1), --date, --messages-file FILE (use - for stdin)
 - `yandex-image-search <query>` — image search by text query. Flags: --json, --num-results, --type, --region, --page, --site
 - `yandex-image-search-by-image (--url URL | --cbir-id ID)` — reverse image search, find pages containing a given image. Flags: --site, --page, --family-mode (none|moderate|strict), --json
 - `yandex-wordstat <top|dynamics|regions|regions-tree>` — Yandex Wordstat query-frequency statistics. `top <phrase>`: most popular queries; `dynamics <phrase> --from DATE`: frequency over time; `regions <phrase>`: geographic distribution; `regions-tree`: supported region IDs
@@ -66,7 +66,11 @@ yandex-wordstat regions-tree returns: {regions[{id, label, children[]}]}
 ```bash
 yandex-search "smart city digital platform" --json
 yandex-search "query" --site habr.com --json
+yandex-search "AI news" --period day --pages 2 --json
+yandex-search "AI news" --period month --sort time --order asc --json
 yandex-gen "explain microservices vs monolith" --json
+yandex-gen "smart city research" --format pdf --lang en --date '>=20250101' --json
+yandex-gen "How do I enable HTTPS?" --messages-file conversation.json --json
 yandex-search "query" --json | jq -r '.[].url'
 yandex-image-search "python logo" --json
 yandex-image-search-by-image --url "https://example.com/photo.jpg" --json
@@ -102,3 +106,18 @@ yandex-wordstat dynamics "python framework" --period monthly --from 2026-01-01 -
 - XML error 15 is no matches; other XML errors exit nonzero. Diagnostics use stderr and redact keys/folder IDs. Invalid arguments exit 2.
 - JSON schema unchanged. date is page modification time from modtime, not verified article publication date.
 - Verify DOI/authors/year at the primary source. Search discovers links; PDFs are downloaded separately.
+
+## Freshness and dialogue
+
+- Web `--period` maps to the API's root `period`: all=PERIOD_ALL_TIME, day=PERIOD_DAY, 2weeks=PERIOD_2_WEEKS, month=PERIOD_MONTH. Without the flag the field is omitted. The filter is kept on every requested page; the output JSON schema is unchanged.
+- `yandex-gen --messages-file FILE` reads a UTF-8 JSON array of `{role, content}` messages; `-` reads stdin. Roles user/assistant and ROLE_USER/ROLE_ASSISTANT are accepted and normalized to API role names.
+- With a positional query, history is followed by that new ROLE_USER message. Without a query, the array is the complete request. Keep the previous assistant's `message` in the history to continue the conversation.
+- The full request must contain 1–100 messages, with non-empty text content of at most 16384 characters each. Invalid input exits 2 before credentials/network and does not echo message contents.
+- History files are input only: the CLI does not create, change or persist them. Response JSON remains the ordinary API response, including message and sources.
+
+## Source filters and sorting
+
+- Generative --format limits source document format and maps to a DOC_FORMAT_* enum; --lang normalizes a two-letter language code to lowercase; --date passes a validated date expression. Each becomes a separate object in the root searchFilters array. With no filters, searchFilters is omitted.
+- Date syntax: YYYYMMDD, <YYYYMMDD, <=YYYYMMDD, >YYYYMMDD, >=YYYYMMDD, YYYYMMDD..YYYYMMDD (inclusive), YYYYMM* or YYYY*. Dates must be valid calendar dates and ranges must not be reversed. Quote expressions containing <, > or *. These are Yandex page-addition dates, not verified publication dates.
+- Web --sort time sets sortSpec.sortMode=SORT_MODE_BY_TIME. The API defaults to newest page updates first; --order asc/desc explicitly sets SORT_ORDER_ASC/DESC. --order requires --sort time. --sort relevance uses SORT_MODE_BY_RELEVANCE. With neither sorting flag the sortSpec field is omitted.
+- Sorting and freshness are kept on every requested page. Source filters work with dialogue and --site. JSON output schemas are unchanged; invalid CLI arguments exit 2 before credentials/network.

@@ -73,8 +73,20 @@ yandex-search "async python" --site habr.com
 # Больше результатов, поиск по .com-индексу
 yandex-search "machine learning" -t com -n 20
 
+# Только результаты за последние сутки
+yandex-search "новости ИИ" --period day --json
+
+# Сначала недавно обновлённые страницы
+yandex-search "новости ИИ" --period month --sort time --json
+
 # Генеративный ответ — YandexGPT с источниками
 yandex-gen "в чём разница между монолитом и микросервисами"
+
+# Ответ по русскоязычным PDF, добавленным в поиск с января 2025 года
+yandex-gen "исследования умных городов" --format pdf --lang ru --date '>=20250101' --json
+
+# Продолжить диалог из JSON-массива сообщений
+yandex-gen "А как включить HTTPS?" --messages-file conversation.json
 
 # JSON: извлечь все URL
 yandex-search "запрос" --json | jq -r '.[].url'
@@ -110,6 +122,9 @@ yandex-wordstat regions "python framework" --scope cities
 | `-r` / `--region` | — | Код региона (например, `213` — Москва) |
 | `-p` / `--page` | `0` | Номер страницы (с нуля) |
 | `--site` | — | Ограничить поиск доменом |
+| `--period` | — | Свежесть: `all`, `day` (24 часа), `2weeks`, `month` |
+| `--sort` | relevance | `relevance` или `time` — по обновлению страниц, сначала новые |
+| `--order` | desc | `asc` или `desc`; требуется `--sort time` |
 | `--json` | off | JSON-массив: `[{title, url, domain, date, passages}]` |
 
 **`yandex-gen`**
@@ -117,7 +132,20 @@ yandex-wordstat regions "python framework" --scope cities
 | Флаг | По умолчанию | Описание |
 |---|---|---|
 | `--site` | — | Ограничить источники доменом |
+| `--format` | — | Формат источников: например, `pdf` |
+| `--lang` | — | Двухбуквенный код языка ISO 639-1: `ru`, `en` и другие |
+| `--date` | — | Дата добавления источника в поиск: например, `'>=20250101'` |
+| `--messages-file FILE` | — | История диалога в UTF-8 JSON; `-` читает stdin |
 | `--json` | off | JSON-ответ YandexGPT |
+
+История — массив объектов `{role, content}` с ролями `user`/`assistant` или
+`ROLE_USER`/`ROLE_ASSISTANT`. Новый запрос добавляется в конец как сообщение
+пользователя. Без запроса CLI отправляет готовый диалог из массива. Файлы истории
+не изменяются и автоматически не создаются. [Пример JSON](docs/USAGE.md#yandex-gen).
+
+Фильтры формата, языка и даты сочетаются с историей и `--site`. Для даты также
+доступны точный день, диапазон, месяц и год. Значения с `<`, `>` или `*` заключай
+в кавычки. Дата добавления страницы в поиск может отличаться от даты публикации.
 
 **`yandex-image-search-by-image`:** `--url` / `--cbir-id` (одно обязательно), `--site`, `--page`, `--family-mode`, `--json`
 

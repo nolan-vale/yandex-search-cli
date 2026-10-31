@@ -91,18 +91,20 @@ def test_post_json_exits_on_network_error():
             "yandex_cli._common.requests.post",
             side_effect=requests.Timeout("timed out"),
         ),
+        pytest.raises(SystemExit, match="Request to Yandex Search API failed"),
     ):
-        with pytest.raises(SystemExit, match="Request to Yandex Search API failed"):
-            post_json("/web/search", "key", {"folderId": "folder"}, timeout=1)
+        post_json("/web/search", "key", {"folderId": "folder"}, timeout=1)
 
 
 def test_post_json_exits_on_invalid_json():
-    with mock.patch(
-        "yandex_cli._common.requests.post",
-        return_value=Response(status_code=200, json_error=True),
+    with (
+        mock.patch(
+            "yandex_cli._common.requests.post",
+            return_value=Response(status_code=200, json_error=True),
+        ),
+        pytest.raises(SystemExit, match="returned invalid JSON"),
     ):
-        with pytest.raises(SystemExit, match="returned invalid JSON"):
-            post_json("/web/search", "key", {"folderId": "folder"}, timeout=1)
+        post_json("/web/search", "key", {"folderId": "folder"}, timeout=1)
 
 
 def test_parse_raw_xml_rejects_missing_raw_data():

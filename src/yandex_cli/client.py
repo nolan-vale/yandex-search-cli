@@ -1,11 +1,76 @@
 from __future__ import annotations
 
+import re
 import sys
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
-from yandex_cli.parsers import parse_image_xml, parse_web_xml
 from yandex_cli._common import post_json
+from yandex_cli.parsers import parse_image_xml, parse_web_xml
+
+DOCUMENT_FORMATS = {
+    name: f"DOC_FORMAT_{name.upper()}"
+    for name in ("pdf", "xls", "ods", "rtf", "ppt", "odp", "swf", "odt", "odg", "doc")
+}
+
+
+def validate_language(value: str) -> str:
+    if not re.fullmatch(r"[a-zA-Z]{2}", value):
+        raise ValueError("language must be a two-letter ISO 639-1 code")
+    return value.lower()
+
+
+def validate_date_filter(value: str) -> str:
+    if match := re.fullmatch(r"(?:[<>]=?)?([0-9]{8})", value):
+        date.fromisoformat(match[1])
+    elif match := re.fullmatch(r"([0-9]{8})\.\.([0-9]{8})", value):
+        start, end = date.fromisoformat(match[1]), date.fromisoformat(match[2])
+        if start > end:
+            raise ValueError("date range start must not be after its end")
+    elif match := re.fullmatch(r"([0-9]{4})([0-9]{2})?\*", value):
+        date(int(match[1]), int(match[2] or 1), 1)
+    else:
+        raise ValueError(
+            "date must be YYYYMMDD, a < / <= / > / >= comparison, "
+            "YYYYMMDD..YYYYMMDD, YYYYMM* or YYYY*"
+        )
+    return value
+
+
+def prepare_messages(
+    query: str | None = None, messages: list[dict[str, str]] | None = None
+) -> list[dict[str, str]]:
+    if messages is not None and not isinstance(messages, list):
+        raise TypeError("messages must be a JSON array")
+    conversation = list(messages) if messages is not None else []
+    if query is not None:
+        conversation.append({"role": "ROLE_USER", "content": query})
+    if not 1 <= len(conversation) <= 100:
+        raise ValueError("generative search requires 1 to 100 messages")
+
+    roles = {
+        "user": "ROLE_USER",
+        "assistant": "ROLE_ASSISTANT",
+        "ROLE_USER": "ROLE_USER",
+        "ROLE_ASSISTANT": "ROLE_ASSISTANT",
+    }
+    normalized = []
+    for index, message in enumerate(conversation, 1):
+        if not isinstance(message, dict):
+            raise TypeError(f"message {index} must be a JSON object")
+        role = message.get("role")
+        if not isinstance(role, str) or role not in roles:
+            raise ValueError(
+                f"message {index} role must be user, assistant, ROLE_USER or ROLE_ASSISTANT"
+            )
+        content = message.get("content")
+        if not isinstance(content, str) or not content.strip() or len(content) > 16384:
+            raise ValueError(
+                f"message {index} content must be non-empty text of at most 16384 characters"
+            )
+        normalized.append({"role": roles[role], "content": content})
+    return normalized
 
 
 @dataclass(frozen=True)
@@ -23,6 +88,9 @@ class YandexSearchClient:
         page: int,
         region: str | None = None,
         pages: int = 1,
+        period: str | None = None,
+        sort_mode: str | None = None,
+        sort_order: str | None = None,
     ) -> list[dict]:
         body: dict = {
             "folderId": self.folder_id,
@@ -40,6 +108,14 @@ class YandexSearchClient:
         }
         if region:
             body["region"] = region
+        if period:
+            body["period"] = period
+        if sort_mode or sort_order:
+            body["sortSpec"] = {}
+            if sort_mode:
+                body["sortSpec"]["sortMode"] = sort_mode
+            if sort_order:
+                body["sortSpec"]["sortOrder"] = sort_order
 
         docs = []
         seen = set()
@@ -58,14 +134,36 @@ class YandexSearchClient:
                     seen.add(url)
         return docs
 
-    def generative_search(self, query: str, *, site: str | None = None) -> dict:
+    def generative_search(
+        self,
+        query: str | None = None,
+        *,
+        site: str | None = None,
+        messages: list[dict[str, str]] | None = None,
+        doc_format: str | None = None,
+        lang: str | None = None,
+        date_filter: str | None = None,
+    ) -> dict:
         body: dict = {
             "folderId": self.folder_id,
-            "messages": [{"content": query, "role": "ROLE_USER"}],
+            "messages": prepare_messages(query, messages),
             "fixMisspell": True,
         }
         if site:
-            body["site"] = [site]
+            body["site"] = {"site": [site]}
+        filters = []
+        if doc_format is not None:
+            try:
+                format_enum = DOCUMENT_FORMATS[doc_format.lower()]
+            except KeyError as exc:
+                raise ValueError("unsupported document format") from exc
+            filters.append({"format": format_enum})
+        if lang is not None:
+            filters.append({"lang": validate_language(lang)})
+        if date_filter is not None:
+            filters.append({"date": validate_date_filter(date_filter)})
+        if filters:
+            body["searchFilters"] = filters
 
         data = post_json("/gen/search", self.api_key, body, timeout=self.timeout)
         if isinstance(data, list):
